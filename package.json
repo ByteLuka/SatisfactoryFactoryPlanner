@@ -1,0 +1,27 @@
+{
+  "name": "satisfactory-factory-planner",
+  "version": "0.1.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "fetch-data": "curl -L https://raw.githubusercontent.com/greeny/SatisfactoryTools/master/data/data.json -o public/data/data.json --create-dirs",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.15.0",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^5.5.3",
+    "vite": "^8.0.10"
+  },
+  "private": true
+}

@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sf-orange: #e8820c;
+  --color-sf-orange-dark: #c4690a;
+  --color-sf-bg: #1a1a1f;
+  --color-sf-surface: #25252d;
+  --color-sf-surface-2: #2e2e38;
+  --color-sf-border: #3a3a46;
+  --color-sf-text: #e8e8f0;
+  --color-sf-text-muted: #8888a0;
+}
