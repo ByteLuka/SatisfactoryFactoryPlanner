@@ -6,33 +6,16 @@ import { ProjectPhaseSelector } from './ProjectPhaseSelector';
 import { MilestoneChecklist } from './MilestoneChecklist';
 import { MamResearchTree } from './MamResearchTree';
 import { HardDriveSelector } from './HardDriveSelector';
+import type { GameData } from '../../types/domain';
 
-export function Phase1Page() {
+function Phase1PageInner({ gameData }: { gameData: GameData }) {
   const navigate = useNavigate();
-  const loadState = useGameData();
-
-  if (loadState.status === 'loading') {
-    return <LoadingSpinner message="Loading game data…" />;
-  }
-
-  if (loadState.status === 'error') {
-    return (
-      <div className="min-h-screen bg-[#1a1a1f] flex items-center justify-center p-8">
-        <div className="bg-red-950/50 border border-red-800 rounded-lg p-6 max-w-lg w-full">
-          <h2 className="text-red-400 text-lg font-semibold mb-2">Failed to load game data</h2>
-          <p className="text-red-300/80 text-sm font-mono">{loadState.error.message}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { data } = loadState;
   const { dispatch } = useGameState();
 
   function handleUnlockAll() {
-    const milestoneClassNames = Object.values(data.milestonesByTier).flat().map(m => m.className);
-    const mamClassNames = data.mamTrees.flatMap(t => t.nodes.map(n => n.className));
-    const alternateClassNames = data.alternates.map(a => a.className);
+    const milestoneClassNames = Object.values(gameData.milestonesByTier).flat().map(m => m.className);
+    const mamClassNames = gameData.mamTrees.flatMap(t => t.nodes.map(n => n.className));
+    const alternateClassNames = gameData.alternates.map(a => a.className);
     dispatch({ type: 'UNLOCK_ALL', milestoneClassNames, mamClassNames, alternateClassNames });
   }
 
@@ -77,11 +60,10 @@ export function Phase1Page() {
         </div>
 
         <ProjectPhaseSelector />
-        <MilestoneChecklist gameData={data} />
-        <MamResearchTree gameData={data} />
-        <HardDriveSelector gameData={data} />
+        <MilestoneChecklist gameData={gameData} />
+        <MamResearchTree gameData={gameData} />
+        <HardDriveSelector gameData={gameData} />
 
-        {/* TODO Phase 2: pass computed GameState (available recipes, buildings) to the production target input */}
         <div className="flex justify-end pb-8">
           <button
             onClick={() => navigate('/phase2')}
@@ -93,4 +75,23 @@ export function Phase1Page() {
       </main>
     </div>
   );
+}
+
+export function Phase1Page() {
+  const loadState = useGameData();
+
+  if (loadState.status === 'loading') return <LoadingSpinner message="Loading game data…" />;
+
+  if (loadState.status === 'error') {
+    return (
+      <div className="min-h-screen bg-[#1a1a1f] flex items-center justify-center p-8">
+        <div className="bg-red-950/50 border border-red-800 rounded-lg p-6 max-w-lg w-full">
+          <h2 className="text-red-400 text-lg font-semibold mb-2">Failed to load game data</h2>
+          <p className="text-red-300/80 text-sm font-mono">{loadState.error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <Phase1PageInner gameData={loadState.data} />;
 }
