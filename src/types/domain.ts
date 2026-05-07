@@ -1,5 +1,5 @@
 // Clean domain types — the shared language of this application.
-// Raw data.json shapes never escape src/data/.
+// Raw data shapes never escape src/data/.
 
 export const SCHEMATIC_TYPE = {
   MILESTONE: 'EST_Milestone',
@@ -90,7 +90,7 @@ export const PROJECT_PHASE_MAX_TIER: Record<number, number> = {
   2: 4,
   3: 6,
   4: 8,
-  5: 8,
+  5: 9,
 };
 
 export const PROJECT_PHASE_LABELS: Record<number, string> = {

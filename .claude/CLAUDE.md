@@ -6,14 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A browser-based Satisfactory factory planner. Players declare their game progress in Phase 1 (Space Elevator phase, HUB milestones, MAM research, alternate recipes), and future phases will use that state to solve optimal production chains and render factory layouts.
 
+## Bootstrap
+
+`public/generated/data/` is gitignored. On a fresh clone you must generate it before the app can run:
+
+1. Copy the game's `Docs.json` (from `<install>/CommunityResources/Docs/Docs.json`) to `satisfactory-assets/en-US.json`.
+2. Run `npm run preprocess` — writes `items.json`, `recipes.json`, `schematics.json`, `buildings.json` to `public/generated/data/`.
+3. `npm run dev` or `npm run build` as normal.
+
+`satisfactory-assets/en-US.json` is not committed (too large). The preprocessing script skips silently when the file is absent and all output files are already present.
+
 ## Commands
 
 ```bash
 npm run dev          # Vite dev server with HMR at localhost:5173
-npm run build        # tsc type-check + Vite production build → dist/
+npm run build        # preprocess (if needed) + tsc + Vite production build → dist/
 npm run preview      # serve the production build locally
-npm run fetch-data   # re-download game data → public/data/data.json
+npm run preprocess   # parse satisfactory-assets/en-US.json → public/generated/data/
 ```
+
+`prebuild` runs `preprocess` automatically — it skips if outputs are newer than the source file, so it adds no overhead when nothing has changed. `npm run dev` does NOT auto-preprocess; run `npm run preprocess` manually when the source data changes.
 
 No test runner or linter is configured yet.
 
@@ -29,10 +41,12 @@ No test runner or linter is configured yet.
 
 ### Layered separation — strict rule
 
-Raw `data.json` shapes **never leave `src/data/`**. The flow is:
+Raw data shapes **never leave `src/data/`**. The flow is:
 
 ```
-public/data/data.json
+satisfactory-assets/en-US.json  (raw game Docs.json, UTF-16 LE)
+  → scripts/preprocess-data.mjs  (Node.js script; run via prebuild or npm run preprocess)
+  → public/generated/data/{items,recipes,schematics,buildings}.json
   → src/data/raw-types.ts    (private shapes matching the JSON)
   → src/data/transformers.ts (converts raw → domain types)
   → src/data/loader.ts       (fetch + call transformers, module-level cache)
@@ -58,45 +72,49 @@ Two separate React Context + `useReducer` stores:
 - `src/store/PlanContext.tsx` — `PlanState` + `PlanAction` reducer; wraps all routes in `App.tsx`
 - `PlanState` holds: targets, resourcePool, strategy, solverResult, manualMachineCounts, nodePositions, solverMode, layoutVersion
 
-### Data shape (data.json)
+### Data shape (generated JSON files)
 
-Source: the official `Docs.json` shipped with the game at
-`<install>/CommunityResources/Docs/Docs.json`, pre-parsed into `public/data/data.json`
-via the `fetch-data` script (based on community tooling — see **Data Sources** below).
+Source: `satisfactory-assets/en-US.json` — the official `Docs.json` shipped with the game
+(`<install>/CommunityResources/Docs/Docs.json`), parsed by `scripts/preprocess-data.mjs`
+into four files under `public/generated/data/`: `items.json`, `recipes.json`, `schematics.json`, `buildings.json`.
 
-Top-level keys: `items`, `recipes`, `schematics`, `generators`, `resources`, `miners`, `buildings`.
+Each file is a `Record<className, Raw*>` object (see `src/data/raw-types.ts`).
+`buildings.json` contains only the 11 manufacturer buildings (keyed by `Build_*_C`); structural/decorative buildings are excluded as they're not needed for production planning.
 
 Schematics are the unlock system. Relevant types (`schematic.type`):
-- `EST_Milestone` — HUB milestones, grouped by `tier` (1–8); tier range maps to Space Elevator phase via `PROJECT_PHASE_MAX_TIER` in `domain.ts`
+- `EST_Milestone` — HUB milestones, grouped by `tier`; tier range maps to Space Elevator phase via `PROJECT_PHASE_MAX_TIER` in `domain.ts`
 - `EST_MAM` — MAM research nodes; all have `tier: 3`; grouped into named trees by `className` prefix (e.g. `Research_Caterium_*` → "Caterium" tree)
 - `EST_Alternate` — alternate recipes from Hard Drives; `unlock.recipes` lists the recipe classNames they unlock
 - `EST_HardDrive`, `EST_ResourceSink`, `EST_Tutorial`, `EST_Custom` — not used in Phase 1
 
-`schematic.unlock.recipes` is the key field: it lists which recipe classNames become available when a schematic is completed. This is what Phase 2 will consume to build the set of available recipes.
+`schematic.unlock.recipes` is the key field: it lists which recipe classNames become available when a schematic is completed. This is what Phase 2 consumes to build the set of available recipes.
 
 ### Known data gaps
 
-Some data is not present in `Docs.json` and must be handled separately:
+- **Raw resource extraction rates** — mining recipes are not in `recipes.json`; treat raw resources as hardcoded source nodes (default: Mk.1 miner on normal node = 60/min).
+- **Building connector positions** (exact X/Y/Z of belt/pipe ports) — defined in Unreal Engine blueprints, not in `Docs.json`. Required for Phase 3; extract via FModel or greeny's `parsePak` script when that phase begins.
+- **Building footprint dimensions** — partially available via `mClearanceData` in `en-US.json`; parse when needed for Phase 3.
 
-- **Raw resource extraction rates** (Iron Ore, Copper Ore, etc.) — mining recipes are not in the recipes list; treat them as hardcoded source nodes with configurable rate (default: Mk.1 miner on normal node = 60/min).
-- **Belt and pipe transfer rates** — present in building descriptors but sparse; hardcode as constants (Conveyor Mk1–Mk5, Pipeline Mk1–Mk2).
-- **Building connector positions** (exact X/Y/Z of belt/pipe ports) — defined in Unreal Engine blueprints, not in `Docs.json`. Required for Phase 3 layout rendering; extract via FModel or greeny's `parsePak` script when that phase begins.
-- **Building footprint dimensions** — partially available via `mClearanceData` bounding boxes in building entries (e.g. Assembler is ~900×1600 units). Parse these when needed for Phase 3.
+### Phase 1 — Game State (implemented)
+
+The Phase 1 UI is a single page (`src/components/phase1/Phase1Page.tsx`) composed of three sections:
+
+- **`PhaseProgressPanel`** — unified Space Elevator phase selector + HUB milestone checklist. Phases are collapsible rows; clicking a phase row sets `projectPhase` (cumulative: Phase 3 implies 1 and 2 are also done). Each row shows a `CircularProgress` that toggles all milestones for that phase. Expanding a phase shows its `TierSection` rows, each also with a `CircularProgress` header. Milestone checkboxes are disabled for phases the player hasn't reached. `ProjectPhaseSelector.tsx` and `MilestoneChecklist.tsx` are dead files — not imported anywhere.
+- **`MamResearchTree`** — collapsible tree sections, each with a `CircularProgress` header. The section-level `CircularProgress` toggles all nodes across all trees.
+- **`HardDriveSelector`** — flat searchable list of alternate recipes with a `CircularProgress` in the section header that toggles all alternates.
+
+**`CircularProgress`** (`src/components/phase1/CircularProgress.tsx`) — shared SVG ring component used across all Phase 1 sections. Renders an orange arc proportional to `value/total`. When an `onClick` prop is provided it renders as a button that toggles all items; without it renders as a plain display element.
 
 ### Phase 2 — Production Planner (implemented)
 
-**New files:**
+**Key files:**
 - `src/types/plan.ts` — all Phase 2 types
 - `src/data/resources.ts` — hardcoded full-map resource pool limits (13 resources)
 - `src/data/planTransformers.ts` — `SolverOutput → React Flow nodes/edges`; `transformPlanToGraphData()`
 - `src/workers/solver.worker.ts` — LP solver Web Worker using `javascript-lp-solver`; handles all three strategies; diagnostic infeasibility messages
 - `src/hooks/useSolver.ts` — typed worker wrapper exposing `{ solve, status, result, cancel }`
 - `src/hooks/useAvailableRecipes.ts` — derives machine-usable recipes + producible items from `GameState` + `GameData`
-- `src/store/PlanContext.tsx` — plan state context
 - `src/utils/graphLayout.ts` — ELK `layered` layout (lazy-loaded via `elkjs/lib/elk.bundled.js`)
-- `src/components/phase2/nodes/ResourceNode.tsx` — raw resource node (left side of graph)
-- `src/components/phase2/nodes/RecipeNode.tsx` — recipe/machine node (editable count in manual mode)
-- `src/components/phase2/nodes/ProductNode.tsx` — target output node (shows achieved vs target rate)
 - `src/components/phase2/TargetInputPanel.tsx` — left sidebar: item search, rate inputs, resource pool toggle, strategy selector, solver/manual toggle, compute button
 - `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout and Reset layout button
 - `src/pages/Phase2Page.tsx` — assembles Phase 2 UI; splits into outer (loading gate) + inner (hooks) components
@@ -142,29 +160,6 @@ Dark industrial theme. Core palette (use these, don't invent new hex values):
 
 ## Product vision & future phases
 
-Understanding the full roadmap prevents architectural decisions that paint later phases into a corner.
-
-### Phase 2 — Production planner (next)
-
-The user specifies what they want to produce and the planner computes the required production chain.
-
-**Inputs:**
-- Target items with desired output rates (e.g. "100 Modular Frames/min"), or no rate for max-output mode
-- Optional: constrained resource pool (e.g. "I only have 240 Iron Ore/min available"); defaults to the full map resource pool
-- Optimization strategy (see below)
-
-**Optimization strategies** (multi-objective; solver must support switching between them):
-- **Maximum output** — given fixed resources, maximize production of the target item; auto-selects best alternate recipes
-- **Minimal machines** — minimize total machine count
-- **Minimal recipe diversity** — minimize number of distinct recipes used (simpler factory to build)
-- More strategies may be added; design the solver interface to accept a pluggable objective function
-
-**Solver approach:** this is a multi-objective linear programming problem. Use a WASM-compiled LP solver running in a Web Worker (e.g. HiGHSjs or `javascript-lp-solver`) so it does not block the UI. The solver operates on the recipe graph derived from `GameState.unlockedMilestones + completedMamResearch + unlockedAlternates`.
-
-**Output:** a production plan — a directed graph of (recipe → machine count → input/output rates). This graph is the input to Phase 3.
-
-**Modular factories:** the user can split the production plan into named modules (e.g. a "Screw Module" that produces screws for downstream consumers). The solver can also suggest a modular decomposition automatically. Modules become the organisational unit for Phase 3 layout.
-
 ### Phase 3 — Interactive factory layout (future)
 
 A visual node-graph editor rendered in the browser where the user can:
@@ -188,14 +183,10 @@ The factory plan is a JSON blob; the backend is a thin CRUD API around it. Desig
 
 ## Data sources
 
-`public/data/data.json` is derived from official and community sources. Do not hand-edit it; re-run `npm run fetch-data` after a game update.
+The files in `public/generated/data/` are generated by `scripts/preprocess-data.mjs` from `satisfactory-assets/en-US.json`. Do not hand-edit them; replace `en-US.json` with the new game version and run `npm run preprocess`.
 
 | Source | What it provides | URL |
 |---|---|---|
 | Official `Docs.json` | Ground truth — items, recipes, buildings, schematics | Shipped with the game at `<install>/CommunityResources/Docs/` |
-| SatisfactoryTools/SatisfactoryData | Versioned, pre-parsed community data (used by `fetch-data`) | https://github.com/SatisfactoryTools/SatisfactoryData |
-| greeny/SatisfactoryTools | Reference parser (`parseDocs` script) and `data.json` format | https://github.com/greeny/SatisfactoryTools |
-| lunafoxfire/satisfactory-docs-parser | npm parser; clean typed output incl. schematics unlock tree | https://github.com/lunafoxfire/satisfactory-docs-parser |
 | Official Satisfactory Wiki | Human-readable reference for belt speeds, building stats, phases | https://satisfactory.wiki.gg |
-
-When the game updates, the community typically updates `SatisfactoryData` first. Check that repo before writing any data migration code.
+| greeny/SatisfactoryTools | Reference parser for the Docs.json format | https://github.com/greeny/SatisfactoryTools |

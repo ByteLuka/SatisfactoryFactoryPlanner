@@ -4,7 +4,8 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "fetch-data": "curl -L https://raw.githubusercontent.com/greeny/SatisfactoryTools/master/data/data.json -o public/data/data.json --create-dirs",
+    "preprocess": "node scripts/preprocess-data.mjs",
+    "prebuild": "node scripts/preprocess-data.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"

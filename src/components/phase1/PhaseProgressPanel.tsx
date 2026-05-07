@@ -206,20 +206,29 @@ function PhaseRow({ phase, gameData }: { phase: ProjectPhase; gameData: GameData
 }
 
 export function PhaseProgressPanel({ gameData }: { gameData: GameData }) {
-  const { gameState } = useGameState();
+  const { gameState, dispatch } = useGameState();
 
   const totalMilestones = Object.values(gameData.milestonesByTier).reduce(
     (sum, ms) => sum + ms.length,
     0,
   );
+  const unlockedCount = gameState.unlockedMilestones.length;
+  const allChecked = unlockedCount === totalMilestones;
+
+  function handleToggleAll(e: React.MouseEvent) {
+    e.stopPropagation();
+    for (const [tierStr, milestones] of Object.entries(gameData.milestonesByTier)) {
+      const tier = Number(tierStr);
+      const classNames = milestones.map(m => m.className);
+      dispatch({ type: 'SET_ALL_MILESTONES_FOR_TIER', tier, classNames, checked: !allChecked });
+    }
+  }
 
   return (
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[#e8e8f0] text-lg font-semibold">Space Elevator & HUB Milestones</h2>
-        <span className="text-[#8888a0] text-sm">
-          {gameState.unlockedMilestones.length} / {totalMilestones} milestones
-        </span>
+        <CircularProgress value={unlockedCount} total={totalMilestones} onClick={handleToggleAll} />
       </div>
       <p className="text-[#8888a0] text-sm mb-4">
         Click a phase to mark it as your highest completed Space Elevator phase. Expand to check

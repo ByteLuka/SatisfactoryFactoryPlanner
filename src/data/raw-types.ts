@@ -1,5 +1,5 @@
 /**
- * Raw shapes from data.json — kept private to src/data/.
+ * Raw shapes from public/generated/data/ — kept private to src/data/.
  * Nothing outside this directory should import from here.
  */
 
