@@ -2,8 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameData } from '../../hooks/useGameData';
 import { useGameState } from '../../hooks/useGameState';
 import { LoadingSpinner } from '../LoadingSpinner';
-import { ProjectPhaseSelector } from './ProjectPhaseSelector';
-import { MilestoneChecklist } from './MilestoneChecklist';
+import { PhaseProgressPanel } from './PhaseProgressPanel';
 import { MamResearchTree } from './MamResearchTree';
 import { HardDriveSelector } from './HardDriveSelector';
 import type { GameData } from '../../types/domain';
@@ -59,8 +58,7 @@ function Phase1PageInner({ gameData }: { gameData: GameData }) {
           </button>
         </div>
 
-        <ProjectPhaseSelector />
-        <MilestoneChecklist gameData={gameData} />
+        <PhaseProgressPanel gameData={gameData} />
         <MamResearchTree gameData={gameData} />
         <HardDriveSelector gameData={gameData} />
 

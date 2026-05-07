@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import type { GameData, MamTree } from '../../types/domain';
 import { useGameState } from '../../hooks/useGameState';
+import { CircularProgress } from './CircularProgress';
 
 interface Props {
   gameData: GameData;
 }
 
-interface TreeSectionProps {
-  tree: MamTree;
-}
-
-function TreeSection({ tree }: TreeSectionProps) {
+function TreeSection({ tree }: { tree: MamTree }) {
   const [expanded, setExpanded] = useState(false);
   const { isMamResearched, dispatch } = useGameState();
 
   const checkedCount = tree.nodes.filter(n => isMamResearched(n.className)).length;
   const allChecked = checkedCount === tree.nodes.length;
 
-  function handleToggleAll() {
+  function handleToggleAll(e: React.MouseEvent) {
+    e.stopPropagation();
     tree.nodes.forEach(node => {
       const isResearched = isMamResearched(node.className);
       if (allChecked ? isResearched : !isResearched) {
@@ -30,36 +28,33 @@ function TreeSection({ tree }: TreeSectionProps) {
     <div className="border border-[#3a3a46] rounded-md overflow-hidden">
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full bg-[#2e2e38] px-4 py-2.5 flex items-center justify-between hover:bg-[#33333f] transition-colors"
+        className="w-full bg-[#2e2e38] px-4 py-2 flex items-center gap-3 hover:bg-[#33333f] transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <span
-            className={`text-[#8888a0] text-xs transition-transform ${expanded ? 'rotate-90' : ''}`}
-          >
-            ▶
-          </span>
-          <span className="text-[#e8e8f0] text-sm font-semibold">{tree.name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[#8888a0] text-xs">
-            {checkedCount}/{tree.nodes.length}
-          </span>
-          {checkedCount > 0 && (
-            <span className="w-2 h-2 rounded-full bg-[#e8820c]" />
-          )}
-        </div>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          className={`flex-shrink-0 text-[#8888a0] transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`}
+        >
+          <path
+            d="M6 4l4 4-4 4"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="flex-1 text-left text-[#e8e8f0] text-sm font-semibold">{tree.name}</span>
+        <CircularProgress
+          value={checkedCount}
+          total={tree.nodes.length}
+          onClick={handleToggleAll}
+        />
       </button>
 
       {expanded && (
         <div className="divide-y divide-[#3a3a46]">
-          <div className="px-4 py-2 flex justify-end">
-            <button
-              onClick={e => { e.stopPropagation(); handleToggleAll(); }}
-              className="text-xs text-[#8888a0] hover:text-[#e8820c] transition-colors"
-            >
-              {allChecked ? 'Uncheck all' : 'Check all'}
-            </button>
-          </div>
           {tree.nodes.map(node => {
             const researched = isMamResearched(node.className);
             return (
@@ -88,7 +83,7 @@ function TreeSection({ tree }: TreeSectionProps) {
 }
 
 export function MamResearchTree({ gameData }: Props) {
-  const { gameState } = useGameState();
+  const { gameState, dispatch } = useGameState();
 
   const totalNodes = gameData.mamTrees.reduce((sum, t) => sum + t.nodes.length, 0);
   const researchedCount = gameState.completedMamResearch.length;
@@ -97,9 +92,19 @@ export function MamResearchTree({ gameData }: Props) {
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[#e8e8f0] text-lg font-semibold">MAM Research</h2>
-        <span className="text-[#8888a0] text-sm">
-          {researchedCount} / {totalNodes}
-        </span>
+        <CircularProgress
+          value={researchedCount}
+          total={totalNodes}
+          onClick={() => {
+            const allDone = researchedCount === totalNodes;
+            gameData.mamTrees.flatMap(t => t.nodes).forEach(node => {
+              const researched = gameState.completedMamResearch.includes(node.className);
+              if (allDone ? researched : !researched) {
+                dispatch({ type: 'TOGGLE_MAM_RESEARCH', className: node.className });
+              }
+            });
+          }}
+        />
       </div>
       <p className="text-[#8888a0] text-sm mb-4">
         Check each research node you have completed in the Molecular Analysis Machine.

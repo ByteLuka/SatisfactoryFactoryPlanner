@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import type { GameData, Schematic } from '../../types/domain';
+import type { GameData } from '../../types/domain';
 import { useGameState } from '../../hooks/useGameState';
+import { CircularProgress } from './CircularProgress';
 
 interface Props {
   gameData: GameData;
@@ -25,9 +26,19 @@ export function HardDriveSelector({ gameData }: Props) {
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[#e8e8f0] text-lg font-semibold">Alternate Recipes</h2>
-        <span className="text-[#8888a0] text-sm">
-          {unlockedCount} / {totalCount}
-        </span>
+        <CircularProgress
+          value={unlockedCount}
+          total={totalCount}
+          onClick={() => {
+            const allUnlocked = unlockedCount === totalCount;
+            gameData.alternates.forEach(a => {
+              const unlocked = isAlternateUnlocked(a.className);
+              if (allUnlocked ? unlocked : !unlocked) {
+                dispatch({ type: 'TOGGLE_ALTERNATE', className: a.className });
+              }
+            });
+          }}
+        />
       </div>
       <p className="text-[#8888a0] text-sm mb-4">
         Check each alternate recipe you have unlocked via Hard Drives in the AWESOME Shop.
