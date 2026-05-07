@@ -63,14 +63,20 @@ Two separate React Context + `useReducer` stores:
 - `src/types/game-state.ts` — `GameState` interface and `ProjectPhase` enum
 - `src/store/gameStateReducer.ts` — pure reducer with typed `GameStateAction` union
 - `src/store/GameStateContext.tsx` — provider; wraps all routes in `App.tsx`
-- `src/hooks/useGameState.ts` — consumer hook with derived boolean helpers
+- `src/hooks/useGameState.ts` — consumer hook with derived boolean helpers (`isMilestoneUnlocked`, `isMamResearched`, `isAlternateUnlocked`)
 
 `GameState` holds four fields: `projectPhase`, `unlockedMilestones`, `completedMamResearch`, `unlockedAlternates` — all keyed by schematic `className` strings.
+
+> **Note:** `pruneInaccessibleMilestones` is exported from `gameStateReducer.ts` and is intended to strip milestones above the current phase's max tier when the player lowers their phase. It is not currently called from `GameStateContext.tsx` — this pruning is unimplemented.
 
 **Plan state (Phase 2 graph/solver state):**
 - `src/types/plan.ts` — all Phase 2 domain types (`SolverInput`, `SolverOutput`, `ProductionPlan`, `PlanNode`, `PlanEdge`, `OptimizationStrategy`)
 - `src/store/PlanContext.tsx` — `PlanState` + `PlanAction` reducer; wraps all routes in `App.tsx`
 - `PlanState` holds: targets, resourcePool, strategy, solverResult, manualMachineCounts, nodePositions, solverMode, layoutVersion
+
+### Data loading
+
+`src/hooks/useGameData.ts` — wraps `loadGameData()` in a React hook that exposes a `LoadState` discriminated union (`loading | success | error`). Holds a module-level `cachedData` variable so the four JSON fetches happen only once per session, even across navigations. Pages gate rendering on `status === 'success'`.
 
 ### Data shape (generated JSON files)
 
@@ -81,6 +87,8 @@ into four files under `public/generated/data/`: `items.json`, `recipes.json`, `s
 Each file is a `Record<className, Raw*>` object (see `src/data/raw-types.ts`).
 `buildings.json` contains only the 11 manufacturer buildings (keyed by `Build_*_C`); structural/decorative buildings are excluded as they're not needed for production planning.
 
+`RawGameData` (in `raw-types.ts`) also declares `generators`, `resources`, and `miners` fields but `loader.ts` never populates them — they are always `{}` and reserved for future phases.
+
 Schematics are the unlock system. Relevant types (`schematic.type`):
 - `EST_Milestone` — HUB milestones, grouped by `tier`; tier range maps to Space Elevator phase via `PROJECT_PHASE_MAX_TIER` in `domain.ts`
 - `EST_MAM` — MAM research nodes; all have `tier: 3`; grouped into named trees by `className` prefix (e.g. `Research_Caterium_*` → "Caterium" tree)
@@ -88,6 +96,12 @@ Schematics are the unlock system. Relevant types (`schematic.type`):
 - `EST_HardDrive`, `EST_ResourceSink`, `EST_Tutorial`, `EST_Custom` — not used in Phase 1
 
 `schematic.unlock.recipes` is the key field: it lists which recipe classNames become available when a schematic is completed. This is what Phase 2 consumes to build the set of available recipes.
+
+### Recipe classification
+
+`RawRecipe` (from `raw-types.ts`) has four boolean flags: `inMachine`, `inHand`, `inWorkshop`, `forBuilding`. The domain `Recipe` type (in `domain.ts`) omits `inWorkshop` — it is stripped during transformation in `transformers.ts` and is not available on the domain type. If you need workshop filtering, read `RawRecipe` inside `src/data/` only.
+
+MAM tree nodes are filtered in `buildMamTrees` (transformers.ts) to only include schematics that unlock at least one `inMachine || inHand` recipe. Nodes whose recipes are all `forBuilding` (e.g. building unlocks like Dimensional Depot, Smart Splitter) are excluded. Trees with no remaining nodes are omitted entirely.
 
 ### Known data gaps
 
@@ -99,11 +113,13 @@ Schematics are the unlock system. Relevant types (`schematic.type`):
 
 The Phase 1 UI is a single page (`src/components/phase1/Phase1Page.tsx`) composed of three sections:
 
-- **`PhaseProgressPanel`** — unified Space Elevator phase selector + HUB milestone checklist. Phases are collapsible rows; clicking a phase row sets `projectPhase` (cumulative: Phase 3 implies 1 and 2 are also done). Each row shows a `CircularProgress` that toggles all milestones for that phase. Expanding a phase shows its `TierSection` rows, each also with a `CircularProgress` header. Milestone checkboxes are disabled for phases the player hasn't reached. `ProjectPhaseSelector.tsx` and `MilestoneChecklist.tsx` are dead files — not imported anywhere.
-- **`MamResearchTree`** — collapsible tree sections, each with a `CircularProgress` header. The section-level `CircularProgress` toggles all nodes across all trees.
+- **`PhaseProgressPanel`** — unified Space Elevator phase selector + HUB milestone checklist. Phases are collapsible rows; clicking a phase row sets `projectPhase` (cumulative: Phase 3 implies 1 and 2 are also done). Each row shows a `CircularProgress` that toggles all milestones for that phase. Expanding a phase shows its `TierSection` rows, each also with a `CircularProgress` header. Milestone checkboxes are disabled for phases the player hasn't reached.
+- **`MamResearchTree`** — collapsible tree sections, each with a `CircularProgress` header. The section-level `CircularProgress` toggles all nodes across all trees. Only shows nodes that unlock production/crafting recipes (see Recipe classification above).
 - **`HardDriveSelector`** — flat searchable list of alternate recipes with a `CircularProgress` in the section header that toggles all alternates.
 
 **`CircularProgress`** (`src/components/phase1/CircularProgress.tsx`) — shared SVG ring component used across all Phase 1 sections. Renders an orange arc proportional to `value/total`. When an `onClick` prop is provided it renders as a button that toggles all items; without it renders as a plain display element.
+
+**Dead files (not imported anywhere):** `ProjectPhaseSelector.tsx`, `MilestoneChecklist.tsx`, `Phase2Placeholder.tsx`, `src/index.ts`.
 
 ### Phase 2 — Production Planner (implemented)
 

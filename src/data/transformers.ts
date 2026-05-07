@@ -63,10 +63,19 @@ function getMamTreeId(className: string): string {
   return match ? match[1] : 'Unknown';
 }
 
-function buildMamTrees(mamSchematics: Schematic[]): MamTree[] {
+function hasProductionRecipe(schematic: Schematic, recipes: Record<string, Recipe>): boolean {
+  return schematic.unlock.recipeClassNames.some(cn => {
+    const r = recipes[cn];
+    return r && (r.inMachine || r.inHand);
+  });
+}
+
+function buildMamTrees(mamSchematics: Schematic[], recipes: Record<string, Recipe>): MamTree[] {
   const treeMap = new Map<string, Schematic[]>();
 
   for (const schematic of mamSchematics) {
+    if (schematic.unlock.recipeClassNames.length === 0) continue;
+    if (!hasProductionRecipe(schematic, recipes)) continue;
     const id = getMamTreeId(schematic.className);
     if (!treeMap.has(id)) treeMap.set(id, []);
     treeMap.get(id)!.push(schematic);
@@ -125,7 +134,7 @@ export function transformGameData(raw: RawGameData): GameData {
     recipes,
     schematics,
     milestonesByTier,
-    mamTrees: buildMamTrees(mamSchematics),
+    mamTrees: buildMamTrees(mamSchematics, recipes),
     alternates,
     buildings,
   };

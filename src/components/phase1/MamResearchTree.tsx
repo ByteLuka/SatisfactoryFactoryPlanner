@@ -86,7 +86,8 @@ export function MamResearchTree({ gameData }: Props) {
   const { gameState, dispatch } = useGameState();
 
   const totalNodes = gameData.mamTrees.reduce((sum, t) => sum + t.nodes.length, 0);
-  const researchedCount = gameState.completedMamResearch.length;
+  const visibleClassNames = new Set(gameData.mamTrees.flatMap(t => t.nodes.map(n => n.className)));
+  const researchedCount = gameState.completedMamResearch.filter(cn => visibleClassNames.has(cn)).length;
 
   return (
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
