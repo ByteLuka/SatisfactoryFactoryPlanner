@@ -1,6 +1,12 @@
 import { useMemo } from 'react';
 import type { GameData, Recipe, Item } from '../types/domain';
 import { useGameState } from './useGameState';
+import {
+  buildAccessibleItemSet,
+  buildItemsRequiringAccessibilityCheck,
+  buildUnlockedBuildingSet,
+  isAlternateEligible,
+} from '../utils/alternateEligibility';
 
 export interface AvailableRecipesResult {
   recipes: Recipe[];
@@ -11,15 +17,27 @@ export function useAvailableRecipes(gameData: GameData): AvailableRecipesResult 
   const { gameState } = useGameState();
 
   return useMemo(() => {
-    const unlockedRecipeClassNames = new Set<string>();
+    const itemsRequiringCheck = buildItemsRequiringAccessibilityCheck(gameData);
+    const accessibleItems = buildAccessibleItemSet(gameState, gameData);
+    const unlockedBuildings = buildUnlockedBuildingSet(gameState, gameData);
 
-    const allUnlocked = [
+    // Only include alternates that are both remembered (in unlockedAlternates) and
+    // currently eligible — ineligible ones are visually unchecked and must not
+    // contribute recipes to the solver.
+    const effectiveAlternates = gameState.unlockedAlternates.filter(className => {
+      const schematic = gameData.schematics[className];
+      if (!schematic) return false;
+      return isAlternateEligible(
+        schematic, gameState, gameData, accessibleItems, itemsRequiringCheck, unlockedBuildings,
+      );
+    });
+
+    const unlockedRecipeClassNames = new Set<string>();
+    for (const className of [
       ...gameState.unlockedMilestones,
       ...gameState.completedMamResearch,
-      ...gameState.unlockedAlternates,
-    ];
-
-    for (const className of allUnlocked) {
+      ...effectiveAlternates,
+    ]) {
       const schematic = gameData.schematics[className];
       if (!schematic) continue;
       for (const rcn of schematic.unlock.recipeClassNames) {
