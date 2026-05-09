@@ -1,7 +1,9 @@
-import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
 import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput } from '../types/plan';
 import { OptimizationStrategy } from '../types/plan';
 import { DEFAULT_RESOURCE_POOL } from '../data/resources';
+
+const STORAGE_KEY = 'sfp_plan_state';
 
 export interface NodePosition {
   x: number;
@@ -52,6 +54,19 @@ function createInitialPlanState(): PlanState {
     nodePositions: {},
     layoutVersion: 0,
   };
+}
+
+type PersistedPlanState = Omit<PlanState, 'solverResult'>;
+
+function loadPlanState(): PlanState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as PersistedPlanState;
+      return { ...parsed, solverResult: null };
+    }
+  } catch {}
+  return createInitialPlanState();
 }
 
 function planReducer(state: PlanState, action: PlanAction): PlanState {
@@ -185,7 +200,12 @@ interface PlanContextValue {
 const PlanContext = createContext<PlanContextValue | null>(null);
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const [planState, dispatch] = useReducer(planReducer, undefined, createInitialPlanState);
+  const [planState, dispatch] = useReducer(planReducer, undefined, loadPlanState);
+
+  useEffect(() => {
+    const { solverResult: _, ...persistable } = planState;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+  }, [planState]);
 
   return <PlanContext.Provider value={{ planState, dispatch }}>{children}</PlanContext.Provider>;
 }

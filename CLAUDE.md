@@ -74,7 +74,7 @@ Two React Context + `useReducer` stores:
 
 `Phase2Page` computes `effectiveStrategy`: if any target has no rate, strategy is forced to `MAX_OUTPUT` regardless of the `strategy` field. Disabled recipes are filtered out of `availableRecipes` before the solve call.
 
-Both providers wrap all routes in `App.tsx`. State persists across navigation.
+Both providers wrap all routes in `App.tsx`. State persists across navigation and across page reloads via `localStorage` (keys `sfp_game_state` and `sfp_plan_state`). Persistence is wired in the providers via `useEffect` on the state object — no special save action needed. `PlanState.solverResult` is deliberately excluded from localStorage (it's transient and re-derived by running the solver); it is always `null` on initial load.
 
 ### Data loading
 
@@ -129,7 +129,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 
 **`SegmentedProgressBar`** (`src/components/phase1/SegmentedProgressBar.tsx`) — horizontal bar divided into `total` equal segments with 2 px gaps, filling left-to-right based on `value`. Used for per-phase milestone progress in `PhaseProgressPanel`.
 
-`MilestoneChecklist.tsx` and `ProjectPhaseSelector.tsx` are unused legacy files left in place.
+`MilestoneChecklist.tsx`, `ProjectPhaseSelector.tsx`, and `src/pages/Phase2Placeholder.tsx` are unused legacy files left in place.
 
 ### Phase 2 — Production Planner (implemented)
 

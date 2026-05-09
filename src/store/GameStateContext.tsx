@@ -1,7 +1,17 @@
-import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
 import type { GameState } from '../types/game-state';
 import { ProjectPhase, createInitialGameState } from '../types/game-state';
 import { gameStateReducer, type GameStateAction } from './gameStateReducer';
+
+const STORAGE_KEY = 'sfp_game_state';
+
+function loadGameState(): GameState {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored) as GameState;
+  } catch {}
+  return createInitialGameState();
+}
 
 interface GameStateContextValue {
   gameState: GameState;
@@ -11,7 +21,11 @@ interface GameStateContextValue {
 const GameStateContext = createContext<GameStateContextValue | null>(null);
 
 export function GameStateProvider({ children }: { children: ReactNode }) {
-  const [gameState, dispatch] = useReducer(gameStateReducer, undefined, createInitialGameState);
+  const [gameState, dispatch] = useReducer(gameStateReducer, undefined, loadGameState);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+  }, [gameState]);
 
   return (
     <GameStateContext.Provider value={{ gameState, dispatch }}>
