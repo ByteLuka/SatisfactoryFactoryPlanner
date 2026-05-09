@@ -125,11 +125,12 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
                     {Object.entries(activePlan.resourceUsage).map(([cn, rate]) => {
                       const item = gameData.items[cn];
                       const name = item?.name ?? cn.replace('Desc_', '').replace('_C', '');
+                      const unit = item?.liquid ? ' m³/min' : '/min';
                       return (
                         <div key={cn} className="flex justify-between text-xs mb-1">
                           <span className="text-[#8888a0] truncate flex-1">{name}</span>
                           <span className="text-[#e8e8f0] font-mono ml-2">
-                            {rate.toFixed(1)}/min
+                            {rate.toFixed(1)}{unit}
                           </span>
                         </div>
                       );

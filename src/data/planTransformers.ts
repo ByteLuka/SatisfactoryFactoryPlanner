@@ -59,6 +59,7 @@ function buildResourceNodesFromEdges(
         itemClassName,
         itemName: item?.name ?? itemClassName,
         ratePerMin: rate,
+        liquid: item?.liquid ?? false,
       },
     };
   });
@@ -86,6 +87,7 @@ function buildImportNodesFromEdges(
         itemClassName,
         itemName: item?.name ?? itemClassName,
         ratePerMin: rate,
+        liquid: item?.liquid ?? false,
       },
     };
   });
@@ -113,11 +115,13 @@ function buildRecipeNodes(
       itemClassName: cn,
       itemName: gameData.items[cn]?.name ?? cn,
       ratePerMin: rate * scale,
+      liquid: gameData.items[cn]?.liquid ?? false,
     }));
     const outputRates = Object.entries(planNode.outputRates).map(([cn, rate]) => ({
       itemClassName: cn,
       itemName: gameData.items[cn]?.name ?? cn,
       ratePerMin: rate * scale,
+      liquid: gameData.items[cn]?.liquid ?? false,
     }));
 
     return {

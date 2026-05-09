@@ -6,6 +6,7 @@ export interface ItemRate {
   itemClassName: string;
   itemName: string;
   ratePerMin: number;
+  liquid: boolean;
 }
 
 export interface RecipeNodeData extends Record<string, unknown> {
@@ -128,7 +129,7 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
               />
               <div className="flex flex-col">
                 <span className="text-[10px] truncate leading-tight" style={{ color: INPUT_COLOR }}>{ir.itemName}</span>
-                <span className="text-[10px] font-mono" style={{ color: INPUT_COLOR }}>{ir.ratePerMin.toFixed(1)}/min</span>
+                <span className="text-[10px] font-mono" style={{ color: INPUT_COLOR }}>{ir.ratePerMin.toFixed(1)}{ir.liquid ? ' m³/min' : '/min'}</span>
               </div>
             </div>
           ))}
@@ -152,7 +153,7 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
                 />
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] truncate leading-tight" style={{ color }}>{or.itemName}</span>
-                  <span className="text-[10px] font-mono" style={{ color }}>{or.ratePerMin.toFixed(1)}/min</span>
+                  <span className="text-[10px] font-mono" style={{ color }}>{or.ratePerMin.toFixed(1)}{or.liquid ? ' m³/min' : '/min'}</span>
                 </div>
               </div>
             );

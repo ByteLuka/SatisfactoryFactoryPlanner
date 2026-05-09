@@ -5,6 +5,7 @@ export interface ResourceNodeData extends Record<string, unknown> {
   itemClassName: string;
   itemName: string;
   ratePerMin: number;
+  liquid: boolean;
 }
 
 export function ResourceNode({ data }: NodeProps & { data: ResourceNodeData }) {
@@ -18,7 +19,7 @@ export function ResourceNode({ data }: NodeProps & { data: ResourceNodeData }) {
       </div>
       <div className="text-[#e8e8f0] text-sm font-semibold truncate">{data.itemName}</div>
       <div className="text-xs mt-1 font-mono" style={{ color: '#2dd4bf' }}>
-        {data.ratePerMin.toFixed(1)}/min
+        {data.ratePerMin.toFixed(1)}{data.liquid ? ' m³/min' : '/min'}
       </div>
 
       <Handle

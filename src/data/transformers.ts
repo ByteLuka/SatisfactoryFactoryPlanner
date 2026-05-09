@@ -21,15 +21,27 @@ function transformSchematic(raw: RawSchematic): Schematic {
   };
 }
 
-function transformRecipe(raw: RawRecipe): Recipe {
+// Liquid amounts in the raw data are stored in liters (1 m³ = 1000 L); resource pool limits are in m³/min.
+// Divide by 1000 to normalize liquids to m³ so LP units are consistent.
+function normalizeAmount(itemClassName: string, amount: number, rawItems: RawGameData['items']): number {
+  return rawItems[itemClassName]?.liquid ? amount / 1000 : amount;
+}
+
+function transformRecipe(raw: RawRecipe, rawItems: RawGameData['items']): Recipe {
   return {
     className: raw.className,
     name: raw.name,
     slug: raw.slug,
     alternate: raw.alternate,
     time: raw.time,
-    ingredients: raw.ingredients.map(i => ({ itemClassName: i.item, amount: i.amount })),
-    products: raw.products.map(p => ({ itemClassName: p.item, amount: p.amount })),
+    ingredients: raw.ingredients.map(i => ({
+      itemClassName: i.item,
+      amount: normalizeAmount(i.item, i.amount, rawItems),
+    })),
+    products: raw.products.map(p => ({
+      itemClassName: p.item,
+      amount: normalizeAmount(p.item, p.amount, rawItems),
+    })),
     producedInClassNames: raw.producedIn,
     inHand: raw.inHand,
     forBuilding: raw.forBuilding,
@@ -98,7 +110,7 @@ export function transformGameData(raw: RawGameData): GameData {
 
   const recipes: Record<string, Recipe> = {};
   for (const [className, rawRecipe] of Object.entries(raw.recipes)) {
-    recipes[className] = transformRecipe(rawRecipe);
+    recipes[className] = transformRecipe(rawRecipe, raw.items);
   }
 
   const items: Record<string, Item> = {};

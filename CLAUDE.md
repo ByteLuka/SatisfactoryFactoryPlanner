@@ -94,6 +94,10 @@ Schematics are the unlock system (`schematic.type`):
 
 `schematic.unlock.recipeClassNames` is the key field: it lists which recipe classNames become available. This is what Phase 2 consumes to build the available recipe set.
 
+### Liquid unit normalization — critical invariant
+
+Raw recipe ingredient/product amounts for liquid items (`Item.liquid === true`) are stored in **liters** in the JSON (e.g. `3000` for 3 m³ of crude oil). Resource pool limits in `src/data/resources.ts` are in **m³/min**. `transformers.ts` divides every liquid amount by 1000 at load time to normalize everything to m³. Never read raw liquid amounts without going through this transform — bypassing it causes a 1000× unit mismatch that silently corrupts LP solutions and displayed flow rates. Graph nodes display liquid rates as `m³/min`; solid rates as `/min`.
+
 ### Recipe classification
 
 `RawRecipe` has four boolean flags: `inMachine`, `inHand`, `inWorkshop`, `forBuilding`. The domain `Recipe` type omits `inWorkshop` — stripped in `transformers.ts`. MAM tree nodes that only unlock `forBuilding` recipes are excluded from `buildMamTrees`.
