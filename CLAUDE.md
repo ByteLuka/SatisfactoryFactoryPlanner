@@ -164,12 +164,15 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 | `ImportNode` | Indigo (`#4f46e5` border) | Manually declared external supply |
 | `RecipeNode` | Neutral (`#3a3a46` border) | Machine + recipe |
 | `ProductNode` | Orange (`#e8820c` border) | Production target |
+| `ByproductNode` | Rose (`#be185d` border) | Recipe output not consumed by any downstream recipe and not a production target |
 
-Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs are green (`#4ade80`), byproduct outputs are amber (`#fbbf24`). Edge colors match the source node type (teal from resource, indigo from import, green to product, neutral between recipes).
+Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs are green (`#4ade80`), other outputs are amber (`#fbbf24`). Edge colors match the source/destination: teal from resource, indigo from import, green to product, rose to byproduct, neutral between recipes.
+
+**Byproduct detection** (`computeEdges` in `solver.worker.ts`): an item is a byproduct when it has recipe producers, no downstream consumers, and is not a production target. Its edge goes to a `byproduct_<itemClassName>` sink node. `ByproductNode` appears as a terminal node on the right side of the graph.
 
 **Graph layout:**
 - ELK `layered` algorithm, direction RIGHT
-- Node size estimates in `planTransformers.ts`: resource/import 200×90, recipe 260×(110+36×max(in,out)), product 210×110
+- Node size estimates in `planTransformers.ts`: resource/import/byproduct 200×90, recipe 260×(110+36×max(in,out)), product 210×110
 - "Reset layout" re-runs ELK; dragging nodes uses React Flow's built-in state
 
 **Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar uses `overflow-y-auto`; the graph fills the remaining space via `flex-1`.
@@ -200,7 +203,8 @@ Dark industrial theme. Base palette:
 Graph node / flow colors (phase 2 only):
 - Resource nodes: teal (`#0d9488`, `#2dd4bf`, `#0d2b2b`)
 - Import nodes: indigo (`#4f46e5`, `#818cf8`, `#1e1b4b`)
-- RecipeNode inputs: blue `#60a5fa`; target outputs: green `#4ade80`; byproducts: amber `#fbbf24`
+- RecipeNode inputs: blue `#60a5fa`; target outputs: green `#4ade80`; other outputs: amber `#fbbf24`
+- Byproduct nodes: rose (`#be185d`, `#fb7185`, `#fda4af`, `#2d1320`)
 
 ### Known data gaps
 

@@ -5,12 +5,14 @@ import type { ResourceNodeData } from '../components/phase2/nodes/ResourceNode';
 import type { RecipeNodeData } from '../components/phase2/nodes/RecipeNode';
 import type { ProductNodeData } from '../components/phase2/nodes/ProductNode';
 import type { ImportNodeData } from '../components/phase2/nodes/ImportNode';
+import type { ByproductNodeData } from '../components/phase2/nodes/ByproductNode';
 
 export type GraphNode =
   | Node<ResourceNodeData, 'resourceNode'>
   | Node<RecipeNodeData, 'recipeNode'>
   | Node<ProductNodeData, 'productNode'>
-  | Node<ImportNodeData, 'importNode'>;
+  | Node<ImportNodeData, 'importNode'>
+  | Node<ByproductNodeData, 'byproductNode'>;
 
 export interface GraphData {
   nodes: GraphNode[];
@@ -26,6 +28,7 @@ export const NODE_DIMENSIONS = {
   }),
   product: { width: 210, height: 110 },
   import: { width: 200, height: 90 },
+  byproduct: { width: 200, height: 90 },
 };
 
 function getMachineName(recipe: { producedInClassNames: string[] }, buildings: GameData['buildings']): string {
@@ -173,14 +176,44 @@ function buildProductNodes(
   });
 }
 
+function buildByproductNodesFromEdges(
+  edges: PlanEdge[],
+  gameData: GameData,
+): Node<ByproductNodeData, 'byproductNode'>[] {
+  const byproductNodeIds = new Set(
+    edges.filter(e => e.toNodeId.startsWith('byproduct_')).map(e => e.toNodeId),
+  );
+
+  return Array.from(byproductNodeIds).map(nodeId => {
+    const itemClassName = nodeId.replace('byproduct_', '');
+    const item = gameData.items[itemClassName];
+    const rate = edges
+      .filter(e => e.toNodeId === nodeId)
+      .reduce((sum, e) => sum + e.ratePerMin, 0);
+
+    return {
+      id: nodeId,
+      type: 'byproductNode' as const,
+      position: { x: 0, y: 0 },
+      data: {
+        itemClassName,
+        itemName: item?.name ?? itemClassName,
+        ratePerMin: rate,
+        liquid: item?.liquid ?? false,
+      },
+    };
+  });
+}
+
 function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
   return planEdges.map(pe => {
     const isFromResource = pe.fromNodeId.startsWith('resource_');
     const isFromImport = pe.fromNodeId.startsWith('import_');
     const isToProduct = pe.toNodeId.startsWith('product_');
+    const isToByproduct = pe.toNodeId.startsWith('byproduct_');
 
     const sourceHandle = isFromResource || isFromImport ? 'out' : `out_${pe.itemClassName}`;
-    const targetHandle = isToProduct ? 'in' : `in_${pe.itemClassName}`;
+    const targetHandle = isToProduct || isToByproduct ? 'in' : `in_${pe.itemClassName}`;
 
     const item = gameData.items[pe.itemClassName];
     const isLiquid = item?.liquid ?? false;
@@ -191,6 +224,7 @@ function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
     if (isFromResource) edgeColor = '#0d9488';
     else if (isFromImport) edgeColor = '#4f46e5';
     else if (isToProduct) edgeColor = '#4ade80';
+    else if (isToByproduct) edgeColor = '#be185d';
 
     return {
       id: pe.id,
@@ -229,10 +263,11 @@ export function transformPlanToGraphData(
     onMachineCountChange,
   );
   const productNodes = buildProductNodes(targets, plan.edges, gameData);
+  const byproductNodes = buildByproductNodesFromEdges(plan.edges, gameData);
   const rfEdges = buildRFEdges(plan.edges, gameData);
 
   return {
-    nodes: [...resourceNodes, ...importNodes, ...recipeNodes, ...productNodes],
+    nodes: [...resourceNodes, ...importNodes, ...recipeNodes, ...productNodes, ...byproductNodes],
     edges: rfEdges,
   };
 }

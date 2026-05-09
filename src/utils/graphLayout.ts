@@ -10,6 +10,8 @@ export interface LayoutPosition {
 function getNodeDimensions(node: GraphNode): { width: number; height: number } {
   if (node.type === 'resourceNode') return NODE_DIMENSIONS.resource;
   if (node.type === 'productNode') return NODE_DIMENSIONS.product;
+  if (node.type === 'importNode') return NODE_DIMENSIONS.import;
+  if (node.type === 'byproductNode') return NODE_DIMENSIONS.byproduct;
   if (node.type === 'recipeNode') {
     const d = node.data;
     return NODE_DIMENSIONS.recipe(d.inputRates.length, d.outputRates.length);

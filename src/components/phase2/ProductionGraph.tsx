@@ -18,6 +18,7 @@ import { ResourceNode } from './nodes/ResourceNode';
 import { RecipeNode } from './nodes/RecipeNode';
 import { ProductNode } from './nodes/ProductNode';
 import { ImportNode } from './nodes/ImportNode';
+import { ByproductNode } from './nodes/ByproductNode';
 import { transformPlanToGraphData } from '../../data/planTransformers';
 import { computeLayout } from '../../utils/graphLayout';
 
@@ -26,6 +27,7 @@ const nodeTypes = {
   recipeNode: RecipeNode,
   productNode: ProductNode,
   importNode: ImportNode,
+  byproductNode: ByproductNode,
 } as const;
 
 interface Props {

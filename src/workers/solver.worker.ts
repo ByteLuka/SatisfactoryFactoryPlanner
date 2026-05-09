@@ -222,6 +222,12 @@ function computeEdges(
       ...(isTarget && surplus > 0.01 ? [{ nodeId: `product_${itemClassName}`, rate: surplus }] : []),
     ];
 
+    // Unconsumed recipe output that isn't a target → byproduct sink
+    const isByproduct = !isRawResource && !isImported && producers.length > 0 && sinks.length === 0 && totalProduction > 0.01;
+    if (isByproduct) {
+      sinks.push({ nodeId: `byproduct_${itemClassName}`, rate: totalProduction });
+    }
+
     if (sources.length === 0 || sinks.length === 0) continue;
 
     const totalSourceRate = sources.reduce((s, src) => s + src.rate, 0);
