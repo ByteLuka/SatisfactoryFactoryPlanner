@@ -1,9 +1,9 @@
 import Solver from 'javascript-lp-solver';
-import type { MainToWorker, WorkerToMain, SolverInput, SolverOutput, PlanNode, PlanEdge, ProductionPlan } from '../types/plan';
+import type { MainToWorker, WorkerToMain, SolverInput, SolverOutput, PlanNode, PlanEdge, ProductionPlan, ManualInput } from '../types/plan';
 import type { Recipe } from '../types/domain';
 import { OptimizationStrategy } from '../types/plan';
+import { FREELY_AVAILABLE_ITEMS } from '../data/resources';
 
-// Rate in items/min that one machine produces/consumes a given amount
 function ratePerMachine(amount: number, cycleTimeSec: number): number {
   return (amount * 60) / cycleTimeSec;
 }
@@ -15,20 +15,19 @@ function buildAndSolve(
   targets: SolverInput['targets'],
   resourceLimits: Record<string, number>,
   strategy: OptimizationStrategy,
+  manualInputs: ManualInput[],
   omitResourceConstraints = false,
 ): ReturnType<typeof Solver.Solve> {
-  const targetItemClassNames = new Set(targets.map(t => t.itemClassName));
-
   const constraints: Record<string, { min?: number; max?: number }> = {};
   const variables: Record<string, Record<string, number>> = {};
 
-  // Balance constraints for producible items
+  // Balance constraints for producible items (including manually imported ones)
   for (const itemClassName of producibleItems) {
     const targetRate = targets.find(t => t.itemClassName === itemClassName)?.ratePerMin;
     constraints[`balance_${itemClassName}`] = { min: targetRate ?? 0 };
   }
 
-  // Resource pool constraints (skipped when omitResourceConstraints = true for diagnostics)
+  // Resource pool constraints
   if (!omitResourceConstraints) {
     for (const resourceClassName of rawResources) {
       const limit = resourceLimits[resourceClassName];
@@ -38,11 +37,11 @@ function buildAndSolve(
     }
   }
 
+  // Recipe variables
   for (const recipe of recipes) {
     const varName = `recipe_${recipe.className}`;
     const variable: Record<string, number> = {};
 
-    // Objective coefficient
     if (strategy === OptimizationStrategy.MAX_OUTPUT) {
       let objCoeff = 0;
       for (const target of targets) {
@@ -54,11 +53,12 @@ function buildAndSolve(
         objCoeff += prodRate - consRate;
       }
       variable['objective'] = objCoeff;
+    } else if (strategy === OptimizationStrategy.NONE) {
+      variable['objective'] = 0;
     } else {
       variable['objective'] = 1;
     }
 
-    // Balance constraint contributions
     for (const product of recipe.products) {
       if (producibleItems.has(product.itemClassName)) {
         const key = `balance_${product.itemClassName}`;
@@ -70,10 +70,6 @@ function buildAndSolve(
         const key = `balance_${ingredient.itemClassName}`;
         variable[key] = (variable[key] ?? 0) - ratePerMachine(ingredient.amount, recipe.time);
       }
-    }
-
-    // Resource constraint contributions
-    for (const ingredient of recipe.ingredients) {
       if (rawResources.has(ingredient.itemClassName)) {
         const key = `resource_${ingredient.itemClassName}`;
         variable[key] = (variable[key] ?? 0) + ratePerMachine(ingredient.amount, recipe.time);
@@ -81,6 +77,18 @@ function buildAndSolve(
     }
 
     variables[varName] = variable;
+  }
+
+  // Import variables for manual inputs
+  for (const mi of manualInputs) {
+    if (mi.ratePerMin <= 0) continue;
+    const varName = `import_${mi.itemClassName}`;
+    const variable: Record<string, number> = {
+      objective: 0,
+      [`balance_${mi.itemClassName}`]: 1,
+    };
+    variables[varName] = variable;
+    constraints[`max_import_${mi.itemClassName}`] = { max: mi.ratePerMin };
   }
 
   return Solver.Solve({
@@ -95,11 +103,11 @@ function computeEdges(
   planNodes: PlanNode[],
   targets: SolverInput['targets'],
   rawResources: Set<string>,
+  importUsage: Record<string, number>,
 ): PlanEdge[] {
   const edges: PlanEdge[] = [];
   const targetItemClassNames = new Set(targets.map(t => t.itemClassName));
 
-  // Map: itemClassName → { producers, consumers }
   const itemFlows = new Map<string, { producers: PlanNode[]; consumers: PlanNode[] }>();
 
   for (const node of planNodes) {
@@ -113,10 +121,9 @@ function computeEdges(
     }
   }
 
-  // Also ensure raw resources with only consumers are in the map
+  // Ensure raw resources with only consumers are tracked
   for (const resource of rawResources) {
     if (!itemFlows.has(resource)) {
-      // Check if any plan node consumes this resource
       const consumers = planNodes.filter(n => n.inputRates[resource] !== undefined);
       if (consumers.length > 0) {
         itemFlows.set(resource, { producers: [], consumers });
@@ -124,20 +131,36 @@ function computeEdges(
     }
   }
 
+  // Ensure imported items with only consumers are tracked
+  for (const [itemClassName, rate] of Object.entries(importUsage)) {
+    if (rate > 0.001 && !itemFlows.has(itemClassName)) {
+      const consumers = planNodes.filter(n => n.inputRates[itemClassName] !== undefined);
+      if (consumers.length > 0) {
+        itemFlows.set(itemClassName, { producers: [], consumers });
+      }
+    }
+  }
+
   for (const [itemClassName, { producers, consumers }] of itemFlows) {
     const isRawResource = rawResources.has(itemClassName) && producers.length === 0;
+    const isImported = (importUsage[itemClassName] ?? 0) > 0.001 && producers.length === 0;
     const isTarget = targetItemClassNames.has(itemClassName);
 
-    const totalProduction = isRawResource
+    const totalProduction = isRawResource || isImported
       ? consumers.reduce((s, n) => s + (n.inputRates[itemClassName] ?? 0), 0)
       : producers.reduce((s, n) => s + (n.outputRates[itemClassName] ?? 0), 0);
 
     const totalConsumption = consumers.reduce((s, n) => s + (n.inputRates[itemClassName] ?? 0), 0);
     const surplus = Math.max(0, totalProduction - totalConsumption);
 
-    const sources: Array<{ nodeId: string; rate: number }> = isRawResource
-      ? [{ nodeId: `resource_${itemClassName}`, rate: totalProduction }]
-      : producers.map(n => ({ nodeId: `recipe_${n.recipeClassName}`, rate: n.outputRates[itemClassName] ?? 0 }));
+    let sources: Array<{ nodeId: string; rate: number }>;
+    if (isRawResource) {
+      sources = [{ nodeId: `resource_${itemClassName}`, rate: totalProduction }];
+    } else if (isImported) {
+      sources = [{ nodeId: `import_${itemClassName}`, rate: importUsage[itemClassName] }];
+    } else {
+      sources = producers.map(n => ({ nodeId: `recipe_${n.recipeClassName}`, rate: n.outputRates[itemClassName] ?? 0 }));
+    }
 
     const sinks: Array<{ nodeId: string; rate: number }> = [
       ...consumers.map(n => ({ nodeId: `recipe_${n.recipeClassName}`, rate: n.inputRates[itemClassName] ?? 0 })),
@@ -149,7 +172,6 @@ function computeEdges(
     const totalSourceRate = sources.reduce((s, src) => s + src.rate, 0);
     if (totalSourceRate < 0.01) continue;
 
-    // Distribute each source proportionally to all sinks
     for (const source of sources) {
       const fraction = source.rate / totalSourceRate;
       for (const sink of sinks) {
@@ -174,7 +196,6 @@ function buildInfeasibilityMessage(
   rawResources: Set<string>,
   producibleItems: Set<string>,
 ): string {
-  // Diagnose: can the problem be solved without resource constraints?
   const unconstrained = buildAndSolve(
     input.availableRecipes,
     rawResources,
@@ -182,6 +203,7 @@ function buildInfeasibilityMessage(
     input.targets,
     {},
     OptimizationStrategy.MIN_MACHINES,
+    input.manualInputs,
     true,
   );
 
@@ -195,7 +217,6 @@ function buildInfeasibilityMessage(
     return 'Production plan is infeasible — the target items cannot be produced with the available recipes.';
   }
 
-  // Find which resources are bottlenecks
   const shortfalls: string[] = [];
   for (const resourceClassName of rawResources) {
     const totalConsumption = input.availableRecipes.reduce((sum, recipe) => {
@@ -222,13 +243,12 @@ function buildInfeasibilityMessage(
 }
 
 function solve(input: SolverInput): SolverOutput {
-  const { targets, availableRecipes, resourcePool, strategy } = input;
+  const { targets, availableRecipes, resourcePool, strategy, manualInputs } = input;
 
   if (targets.length === 0) {
     return { status: 'error', errorMessage: 'No production targets specified.' };
   }
 
-  // Determine producible items (items that can be output by at least one available recipe)
   const producibleItems = new Set<string>();
   for (const recipe of availableRecipes) {
     for (const product of recipe.products) {
@@ -236,7 +256,13 @@ function solve(input: SolverInput): SolverOutput {
     }
   }
 
-  // Validate targets
+  // Manual inputs make their items "producible" for balance constraint purposes
+  for (const mi of manualInputs) {
+    if (mi.ratePerMin > 0) {
+      producibleItems.add(mi.itemClassName);
+    }
+  }
+
   for (const target of targets) {
     if (!producibleItems.has(target.itemClassName)) {
       return {
@@ -246,11 +272,11 @@ function solve(input: SolverInput): SolverOutput {
     }
   }
 
-  // Determine raw resources (consumed but not produced by any available recipe)
+  // Raw resources: consumed but not producible and not freely available
   const rawResources = new Set<string>();
   for (const recipe of availableRecipes) {
     for (const ingredient of recipe.ingredients) {
-      if (!producibleItems.has(ingredient.itemClassName)) {
+      if (!producibleItems.has(ingredient.itemClassName) && !FREELY_AVAILABLE_ITEMS.has(ingredient.itemClassName)) {
         rawResources.add(ingredient.itemClassName);
       }
     }
@@ -265,6 +291,7 @@ function solve(input: SolverInput): SolverOutput {
     targets,
     resourceLimits,
     strategy,
+    manualInputs,
   );
 
   if (!result.feasible) {
@@ -272,7 +299,6 @@ function solve(input: SolverInput): SolverOutput {
     return { status: 'infeasible', errorMessage };
   }
 
-  // Extract plan nodes from solver result
   const planNodes: PlanNode[] = [];
   for (const recipe of availableRecipes) {
     const x = (result[`recipe_${recipe.className}`] as number | undefined) ?? 0;
@@ -282,6 +308,8 @@ function solve(input: SolverInput): SolverOutput {
     const outputRates: Record<string, number> = {};
 
     for (const ingredient of recipe.ingredients) {
+      // Skip freely available items — they don't need to be shown or tracked
+      if (FREELY_AVAILABLE_ITEMS.has(ingredient.itemClassName)) continue;
       inputRates[ingredient.itemClassName] = x * ratePerMachine(ingredient.amount, recipe.time);
     }
     for (const product of recipe.products) {
@@ -297,24 +325,26 @@ function solve(input: SolverInput): SolverOutput {
     });
   }
 
-  // Compute resource usage
+  // Resource usage from raw resources
   const resourceUsage: Record<string, number> = {};
   for (const resource of rawResources) {
-    const total = planNodes.reduce(
-      (sum, node) => sum + (node.inputRates[resource] ?? 0),
-      0,
-    );
+    const total = planNodes.reduce((sum, node) => sum + (node.inputRates[resource] ?? 0), 0);
     if (total > 0.001) resourceUsage[resource] = total;
   }
 
-  // Compute edges
-  const edges = computeEdges(planNodes, targets, rawResources);
+  // Import usage from manual inputs
+  const importUsage: Record<string, number> = {};
+  for (const mi of manualInputs) {
+    const rate = (result[`import_${mi.itemClassName}`] as number | undefined) ?? 0;
+    if (rate > 0.001) importUsage[mi.itemClassName] = rate;
+  }
 
+  const edges = computeEdges(planNodes, targets, rawResources, importUsage);
   const totalMachineCount = planNodes.reduce((sum, n) => sum + Math.ceil(n.machineCount), 0);
 
   return {
     status: 'optimal',
-    plan: { nodes: planNodes, edges, resourceUsage, totalMachineCount },
+    plan: { nodes: planNodes, edges, resourceUsage, importUsage, totalMachineCount },
   };
 }
 

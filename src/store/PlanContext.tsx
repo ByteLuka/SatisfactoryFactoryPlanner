@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
-import type { ProductionTarget, ResourcePool, SolverOutput } from '../types/plan';
+import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput } from '../types/plan';
 import { OptimizationStrategy } from '../types/plan';
 import { DEFAULT_RESOURCE_POOL } from '../data/resources';
 
@@ -11,6 +11,8 @@ export interface NodePosition {
 export interface PlanState {
   solverMode: 'solver' | 'manual';
   targets: ProductionTarget[];
+  manualInputs: ManualInput[];
+  disabledRecipes: string[];
   resourcePool: ResourcePool;
   strategy: OptimizationStrategy;
   solverResult: SolverOutput | null;
@@ -23,12 +25,17 @@ export type PlanAction =
   | { type: 'ADD_TARGET'; itemClassName: string }
   | { type: 'REMOVE_TARGET'; id: string }
   | { type: 'SET_TARGET_RATE'; id: string; ratePerMin: number | undefined }
+  | { type: 'ADD_MANUAL_INPUT'; itemClassName: string }
+  | { type: 'REMOVE_MANUAL_INPUT'; id: string }
+  | { type: 'SET_MANUAL_INPUT_RATE'; id: string; ratePerMin: number }
   | { type: 'SET_RESOURCE_POOL_MODE'; mode: 'map' | 'custom' }
   | { type: 'SET_RESOURCE_LIMIT'; itemClassName: string; limit: number }
   | { type: 'SET_STRATEGY'; strategy: OptimizationStrategy }
   | { type: 'SET_SOLVER_RESULT'; result: SolverOutput }
   | { type: 'SET_SOLVER_MODE'; mode: 'solver' | 'manual' }
   | { type: 'SET_MANUAL_MACHINE_COUNT'; recipeClassName: string; count: number }
+  | { type: 'TOGGLE_RECIPE'; recipeClassName: string }
+  | { type: 'SET_ALL_RECIPES'; classNames: string[]; enabled: boolean }
   | { type: 'SET_NODE_POSITIONS'; positions: Record<string, NodePosition> }
   | { type: 'RESET_LAYOUT' };
 
@@ -36,6 +43,8 @@ function createInitialPlanState(): PlanState {
   return {
     solverMode: 'solver',
     targets: [],
+    manualInputs: [],
+    disabledRecipes: [],
     resourcePool: DEFAULT_RESOURCE_POOL,
     strategy: OptimizationStrategy.MIN_MACHINES,
     solverResult: null,
@@ -63,6 +72,25 @@ function planReducer(state: PlanState, action: PlanAction): PlanState {
         ...state,
         targets: state.targets.map(t =>
           t.id === action.id ? { ...t, ratePerMin: action.ratePerMin } : t,
+        ),
+      };
+
+    case 'ADD_MANUAL_INPUT': {
+      const id = `input_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      return {
+        ...state,
+        manualInputs: [...state.manualInputs, { id, itemClassName: action.itemClassName, ratePerMin: 0 }],
+      };
+    }
+
+    case 'REMOVE_MANUAL_INPUT':
+      return { ...state, manualInputs: state.manualInputs.filter(mi => mi.id !== action.id) };
+
+    case 'SET_MANUAL_INPUT_RATE':
+      return {
+        ...state,
+        manualInputs: state.manualInputs.map(mi =>
+          mi.id === action.id ? { ...mi, ratePerMin: action.ratePerMin } : mi,
         ),
       };
 
@@ -117,6 +145,26 @@ function planReducer(state: PlanState, action: PlanAction): PlanState {
           [action.recipeClassName]: action.count,
         },
       };
+
+    case 'TOGGLE_RECIPE': {
+      const disabled = new Set(state.disabledRecipes);
+      if (disabled.has(action.recipeClassName)) {
+        disabled.delete(action.recipeClassName);
+      } else {
+        disabled.add(action.recipeClassName);
+      }
+      return { ...state, disabledRecipes: Array.from(disabled) };
+    }
+
+    case 'SET_ALL_RECIPES': {
+      const disabled = new Set(state.disabledRecipes);
+      if (action.enabled) {
+        for (const cn of action.classNames) disabled.delete(cn);
+      } else {
+        for (const cn of action.classNames) disabled.add(cn);
+      }
+      return { ...state, disabledRecipes: Array.from(disabled) };
+    }
 
     case 'SET_NODE_POSITIONS':
       return { ...state, nodePositions: action.positions };

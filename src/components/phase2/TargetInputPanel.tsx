@@ -13,8 +13,8 @@ interface Props {
   solverStatus: 'idle' | 'solving';
 }
 
-const STRATEGY_LABELS: Record<OptimizationStrategy, string> = {
-  [OptimizationStrategy.MAX_OUTPUT]: 'Maximize output',
+const OPTIMIZATION_LABELS: Partial<Record<OptimizationStrategy, string>> = {
+  [OptimizationStrategy.NONE]: 'No preference',
   [OptimizationStrategy.MIN_MACHINES]: 'Minimize machines',
   [OptimizationStrategy.MIN_RECIPES]: 'Minimize recipe diversity',
 };
@@ -23,10 +23,12 @@ function ItemSearch({
   items,
   onSelect,
   alreadySelected,
+  placeholder,
 }: {
   items: Item[];
   onSelect: (itemClassName: string) => void;
   alreadySelected: Set<string>;
+  placeholder: string;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -60,7 +62,7 @@ function ItemSearch({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Search items to produce…"
+        placeholder={placeholder}
         className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-sm text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
       />
       {open && filtered.length > 0 && (
@@ -96,13 +98,24 @@ function ItemSearch({
 }
 
 export function TargetInputPanel({ planState, dispatch, producibleItems, onCompute, solverStatus }: Props) {
-  const { targets, resourcePool, strategy, solverMode } = planState;
+  const { targets, manualInputs, resourcePool, strategy, solverMode } = planState;
   const anyUnratedTarget = targets.some(t => t.ratePerMin === undefined);
-  const alreadySelected = new Set(targets.map(t => t.itemClassName));
+  const alreadySelectedTargets = new Set(targets.map(t => t.itemClassName));
+  const alreadySelectedInputs = new Set(manualInputs.map(mi => mi.itemClassName));
   const isSolving = solverStatus === 'solving';
 
   const itemByClassName: Record<string, Item> = {};
   for (const item of producibleItems) itemByClassName[item.className] = item;
+
+  // Effective strategy: if any target has no rate, force MAX_OUTPUT
+  const effectiveStrategy = anyUnratedTarget ? OptimizationStrategy.MAX_OUTPUT : strategy;
+
+  // Optimization options that are user-selectable (not MAX_OUTPUT — that's implicit)
+  const optimizationOptions = [
+    OptimizationStrategy.NONE,
+    OptimizationStrategy.MIN_MACHINES,
+    OptimizationStrategy.MIN_RECIPES,
+  ] as const;
 
   return (
     <div className="flex flex-col gap-4">
@@ -162,41 +175,105 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
           <ItemSearch
             items={producibleItems}
             onSelect={cn => dispatch({ type: 'ADD_TARGET', itemClassName: cn })}
-            alreadySelected={alreadySelected}
+            alreadySelected={alreadySelectedTargets}
+            placeholder="Search items to produce…"
           />
         )}
       </section>
 
-      {/* Optimization strategy (shown only when some targets have no rate) */}
-      {anyUnratedTarget && (
-        <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-          <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Optimization Strategy</h3>
-          <div className="flex flex-col gap-2">
-            {(Object.values(OptimizationStrategy) as OptimizationStrategy[]).map(s => (
-              <label key={s} className="flex items-center gap-3 cursor-pointer">
-                <span
-                  className={[
-                    'w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center',
-                    strategy === s ? 'border-[#e8820c]' : 'border-[#3a3a46]',
-                  ].join(' ')}
+      {/* Imported inputs */}
+      <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
+        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-1">Imported Inputs</h3>
+        <p className="text-[#8888a0] text-xs mb-3">
+          Items produced by an external factory. The solver will use them as additional supply.
+        </p>
+
+        {manualInputs.length > 0 && (
+          <div className="flex flex-col gap-2 mb-3">
+            {manualInputs.map(mi => {
+              const item = itemByClassName[mi.itemClassName];
+              return (
+                <div
+                  key={mi.id}
+                  className="flex items-center gap-2 bg-[#1e1b4b] border border-[#4f46e5]/50 rounded-md px-3 py-2"
                 >
-                  {strategy === s && <span className="w-2 h-2 rounded-full bg-[#e8820c]" />}
-                </span>
-                <span className="text-sm text-[#e8e8f0]">
+                  <span className="flex-1 text-sm text-[#e8e8f0] truncate">
+                    {item?.name ?? mi.itemClassName}
+                  </span>
                   <input
-                    type="radio"
-                    className="sr-only"
-                    checked={strategy === s}
-                    onChange={() => dispatch({ type: 'SET_STRATEGY', strategy: s })}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={mi.ratePerMin}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value);
+                      dispatch({
+                        type: 'SET_MANUAL_INPUT_RATE',
+                        id: mi.id,
+                        ratePerMin: isNaN(val) ? 0 : val,
+                      });
+                    }}
+                    className="w-20 bg-[#1a1a1f] border border-[#4f46e5]/40 rounded px-2 py-1 text-xs text-[#e8e8f0] focus:outline-none focus:border-[#4f46e5] text-right"
                   />
-                  {STRATEGY_LABELS[s]}
-                </span>
-              </label>
-            ))}
+                  <span className="text-[#8888a0] text-xs">/min</span>
+                  <button
+                    onClick={() => dispatch({ type: 'REMOVE_MANUAL_INPUT', id: mi.id })}
+                    className="text-[#8888a0] hover:text-[#f87171] transition-colors text-xs ml-1"
+                    title="Remove input"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-[#8888a0] text-xs mt-2">
-            Note: MIN_RECIPES uses the same LP formulation as MIN_MACHINES (LP cannot minimize recipe count exactly without integer programming).
-          </p>
+        )}
+
+        {producibleItems.length > 0 && (
+          <ItemSearch
+            items={producibleItems}
+            onSelect={cn => dispatch({ type: 'ADD_MANUAL_INPUT', itemClassName: cn })}
+            alreadySelected={alreadySelectedInputs}
+            placeholder="Search items to import…"
+          />
+        )}
+      </section>
+
+      {/* Optimization */}
+      {targets.length > 0 && (
+        <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
+          <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Optimization</h3>
+
+          {anyUnratedTarget ? (
+            <div className="text-xs text-[#e8820c] bg-[#e8820c]/10 border border-[#e8820c]/30 rounded-md px-3 py-2">
+              Maximizing output — leave rate blank on any target to maximize it. Set a rate on all
+              targets to choose a different optimization.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {optimizationOptions.map(s => (
+                <label key={s} className="flex items-center gap-3 cursor-pointer">
+                  <span
+                    className={[
+                      'w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center',
+                      strategy === s ? 'border-[#e8820c]' : 'border-[#3a3a46]',
+                    ].join(' ')}
+                  >
+                    {strategy === s && <span className="w-2 h-2 rounded-full bg-[#e8820c]" />}
+                  </span>
+                  <span className="text-sm text-[#e8e8f0]">
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      checked={strategy === s}
+                      onChange={() => dispatch({ type: 'SET_STRATEGY', strategy: s })}
+                    />
+                    {OPTIMIZATION_LABELS[s]}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -255,35 +332,20 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
         )}
       </section>
 
-      {/* Compute / mode toggle */}
-      <div className="flex items-center gap-3">
-        {solverMode === 'solver' && (
-          <button
-            onClick={onCompute}
-            disabled={isSolving || targets.length === 0}
-            className={[
-              'flex-1 py-2.5 rounded-md font-semibold text-sm transition-colors flex items-center justify-center gap-2',
-              targets.length === 0
-                ? 'bg-[#2e2e38] text-[#8888a0] cursor-not-allowed'
-                : isSolving
-                  ? 'bg-[#e8820c]/60 text-white cursor-wait'
-                  : 'bg-[#e8820c] hover:bg-[#c4690a] text-white',
-            ].join(' ')}
-          >
-            {isSolving ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Solving…
-              </>
-            ) : (
-              'Compute'
-            )}
-          </button>
-        )}
-
+      {/* Mode toggle + Compute */}
+      <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4 flex flex-col gap-3">
         {/* Solver / Manual toggle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[#8888a0] text-xs">Solver</span>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[#e8e8f0] text-xs font-semibold">
+              {solverMode === 'solver' ? 'Solver mode' : 'Manual mode'}
+            </span>
+            <span className="text-[#8888a0] text-[10px] mt-0.5">
+              {solverMode === 'solver'
+                ? 'LP solver computes optimal machine counts'
+                : 'Manually adjust machine counts in the graph'}
+            </span>
+          </div>
           <button
             onClick={() =>
               dispatch({
@@ -292,7 +354,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
               })
             }
             className={[
-              'relative w-10 h-5 rounded-full transition-colors',
+              'relative w-10 h-5 rounded-full transition-colors flex-shrink-0',
               solverMode === 'manual' ? 'bg-[#e8820c]' : 'bg-[#3a3a46]',
             ].join(' ')}
             title={`Switch to ${solverMode === 'solver' ? 'manual' : 'solver'} mode`}
@@ -304,9 +366,33 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
               ].join(' ')}
             />
           </button>
-          <span className="text-[#8888a0] text-xs">Manual</span>
         </div>
-      </div>
+
+        {/* Compute button — always visible */}
+        <button
+          onClick={onCompute}
+          disabled={isSolving || targets.length === 0}
+          className={[
+            'w-full py-2.5 rounded-md font-semibold text-sm transition-colors flex items-center justify-center gap-2',
+            targets.length === 0
+              ? 'bg-[#2e2e38] text-[#8888a0] cursor-not-allowed'
+              : isSolving
+                ? 'bg-[#e8820c]/60 text-white cursor-wait'
+                : 'bg-[#e8820c] hover:bg-[#c4690a] text-white',
+          ].join(' ')}
+        >
+          {isSolving ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Solving…
+            </>
+          ) : solverMode === 'manual' ? (
+            'Re-run Solver'
+          ) : (
+            'Compute'
+          )}
+        </button>
+      </section>
     </div>
   );
 }

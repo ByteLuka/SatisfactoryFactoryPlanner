@@ -64,8 +64,15 @@ Two React Context + `useReducer` stores:
 - `src/hooks/useGameState.ts` — consumer hook with boolean helpers (`isMilestoneUnlocked`, `isMamResearched`, `isAlternateUnlocked`)
 - Phase-downgrade pruning (clearing milestones above the new phase's max tier) is handled in `PhaseProgressPanel`'s `handleDotClick`, not in the reducer. `pruneInaccessibleMilestones` in `gameStateReducer.ts` exists but is not called.
 
-**Plan state (Phase 2):** `PlanState` holds targets, resourcePool, strategy, solverResult, manualMachineCounts, nodePositions, solverMode, layoutVersion.
-- `src/types/plan.ts`, `src/store/PlanContext.tsx`
+**Plan state (Phase 2):** `PlanState` in `src/store/PlanContext.tsx` holds:
+- `targets` — items to produce with optional fixed rates (undefined rate = maximize)
+- `manualInputs` — items imported from external factories, each with a fixed supply rate
+- `disabledRecipes` — classNames of recipes the user has toggled off; all recipes are enabled by default
+- `resourcePool` — map-based or custom raw resource limits
+- `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | MIN_MACHINES | MIN_RECIPES | NONE`
+- `solverResult`, `manualMachineCounts`, `nodePositions`, `solverMode`, `layoutVersion`
+
+`Phase2Page` computes `effectiveStrategy`: if any target has no rate, strategy is forced to `MAX_OUTPUT` regardless of the `strategy` field. Disabled recipes are filtered out of `availableRecipes` before the solve call.
 
 Both providers wrap all routes in `App.tsx`. State persists across navigation.
 
@@ -123,28 +130,45 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 ### Phase 2 — Production Planner (implemented)
 
 **Key files:**
-- `src/types/plan.ts` — all Phase 2 types
-- `src/data/resources.ts` — hardcoded full-map resource pool limits (13 resources)
-- `src/data/planTransformers.ts` — `transformPlanToGraphData()`: `SolverOutput → React Flow nodes/edges`
-- `src/workers/solver.worker.ts` — LP solver Web Worker; handles all three strategies; diagnostic infeasibility messages
+- `src/types/plan.ts` — all Phase 2 types (`OptimizationStrategy`, `ProductionTarget`, `ManualInput`, `SolverInput`, `ProductionPlan`, etc.)
+- `src/data/resources.ts` — hardcoded full-map resource pool limits; `FREELY_AVAILABLE_ITEMS` set (Wood, Leaves, Mycelia, etc.)
+- `src/data/planTransformers.ts` — `transformPlanToGraphData()`: `ProductionPlan → React Flow nodes/edges`
+- `src/workers/solver.worker.ts` — LP solver Web Worker
 - `src/hooks/useSolver.ts` — typed worker wrapper exposing `{ solve, status, result, cancel }`
-- `src/hooks/useAvailableRecipes.ts` — filters eligible recipes (applying alternate eligibility) + builds producible item list
+- `src/hooks/useAvailableRecipes.ts` — filters eligible recipes + builds producible item list
 - `src/utils/graphLayout.ts` — ELK `layered` layout (lazy-loaded)
-- `src/components/phase2/TargetInputPanel.tsx` — left sidebar: item search, rate inputs, resource pool toggle, strategy selector, solver/manual toggle, compute button
-- `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout and Reset layout button
-- `src/pages/Phase2Page.tsx` — splits into outer (loading gate) + inner (hooks) components
+- `src/components/phase2/TargetInputPanel.tsx` — left sidebar: targets, imported inputs, optimization, resource pool, solver/manual toggle
+- `src/components/phase2/RecipeListPanel.tsx` — collapsible recipe toggle panel; grouped by machine; shows in-use indicator
+- `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout
+- `src/pages/Phase2Page.tsx` — outer (loading gate) + inner (hooks + layout); filters disabled recipes before solve
 
-**LP solver design:**
-- Variables: `recipe_<className>` = fractional machine count
-- Constraints: `balance_<item>` (net production ≥ target or ≥ 0), `resource_<item>` (consumption ≤ pool)
-- MIN_MACHINES / MIN_RECIPES: minimize `sum(x_r)`
-- MAX_OUTPUT: maximize net production of target items with no explicit rate
-- Infeasibility: re-runs without resource constraints to identify bottleneck resources
+**LP solver design (`solver.worker.ts`):**
+- Variables: `recipe_<className>` = fractional machine count, `import_<className>` = imported supply used (≤ specified rate, objective cost 0)
+- Constraints: `balance_<item>` (net production ≥ target or ≥ 0), `resource_<item>` (consumption ≤ pool), `max_import_<item>` (import usage ≤ declared rate)
+- `FREELY_AVAILABLE_ITEMS` (Wood, Leaves, Mycelia, etc.) are excluded from `rawResources` and from recipe `inputRates` — they don't constrain the LP and don't appear as graph nodes
+- `OptimizationStrategy`:
+  - `MAX_OUTPUT` — maximizes net production of unrated targets; auto-selected when any target has no rate
+  - `MIN_MACHINES` / `MIN_RECIPES` — minimizes `sum(machine count)`; requires all targets to have rates
+  - `NONE` — zero objective coefficients; LP finds any feasible solution
+- Infeasibility: re-runs without resource constraints to identify bottleneck resources vs. unproducible items
+
+**Graph node types and color semantics:**
+
+| Node type | Color | Represents |
+|---|---|---|
+| `ResourceNode` | Teal (`#0d9488` border) | Raw extracted resource |
+| `ImportNode` | Indigo (`#4f46e5` border) | Manually declared external supply |
+| `RecipeNode` | Neutral (`#3a3a46` border) | Machine + recipe |
+| `ProductNode` | Orange (`#e8820c` border) | Production target |
+
+Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs are green (`#4ade80`), byproduct outputs are amber (`#fbbf24`). Edge colors match the source node type (teal from resource, indigo from import, green to product, neutral between recipes).
 
 **Graph layout:**
 - ELK `layered` algorithm, direction RIGHT
-- Node sizes: ResourceNode 200×90, RecipeNode 260×(110+36×max(in,out)), ProductNode 210×110
+- Node size estimates in `planTransformers.ts`: resource/import 200×90, recipe 260×(110+36×max(in,out)), product 210×110
 - "Reset layout" re-runs ELK; dragging nodes uses React Flow's built-in state
+
+**Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar uses `overflow-y-auto`; the graph fills the remaining space via `flex-1`.
 
 ### Routing
 
@@ -164,10 +188,15 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 
 ### Styling
 
-Dark industrial theme. Fixed palette — do not invent new hex values:
+Dark industrial theme. Base palette:
 - Background: `#1a1a1f` / Surface: `#25252d` / Surface-2: `#2e2e38`
 - Border: `#3a3a46` / Text: `#e8e8f0` / Muted: `#8888a0`
 - Accent (Satisfactory orange): `#e8820c` / Accent dark: `#c4690a`
+
+Graph node / flow colors (phase 2 only):
+- Resource nodes: teal (`#0d9488`, `#2dd4bf`, `#0d2b2b`)
+- Import nodes: indigo (`#4f46e5`, `#818cf8`, `#1e1b4b`)
+- RecipeNode inputs: blue `#60a5fa`; target outputs: green `#4ade80`; byproducts: amber `#fbbf24`
 
 ### Known data gaps
 

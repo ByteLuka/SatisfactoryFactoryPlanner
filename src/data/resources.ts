@@ -1,5 +1,16 @@
 import type { ResourcePool } from '../types/plan';
 
+// Items that are freely gatherable in the world (not mined, no rate limit, no graph node)
+export const FREELY_AVAILABLE_ITEMS = new Set([
+  'Desc_Wood_C',
+  'Desc_Leaves_C',
+  'Desc_Mycelia_C',
+  'Desc_FlowerPetals_C',
+  'Desc_Berry_C',         // Beryl Nut
+  'Desc_Paleberry_C',
+  'Desc_BaconAgaric_C',
+]);
+
 // Full-map resource totals (items/min at 100% clock speed, Mk.1 miners on all nodes)
 export const MAP_RESOURCE_POOL_LIMITS: Record<string, number> = {
   Desc_OreIron_C: 70380,

@@ -4,12 +4,19 @@ export enum OptimizationStrategy {
   MAX_OUTPUT = 'MAX_OUTPUT',
   MIN_MACHINES = 'MIN_MACHINES',
   MIN_RECIPES = 'MIN_RECIPES',
+  NONE = 'NONE',
 }
 
 export interface ProductionTarget {
   id: string;
   itemClassName: string;
   ratePerMin?: number;
+}
+
+export interface ManualInput {
+  id: string;
+  itemClassName: string;
+  ratePerMin: number;
 }
 
 export interface ResourcePool {
@@ -22,6 +29,7 @@ export interface SolverInput {
   availableRecipes: Recipe[];
   resourcePool: ResourcePool;
   strategy: OptimizationStrategy;
+  manualInputs: ManualInput[];
 }
 
 export interface SolverOutput {
@@ -34,6 +42,7 @@ export interface ProductionPlan {
   nodes: PlanNode[];
   edges: PlanEdge[];
   resourceUsage: Record<string, number>;
+  importUsage: Record<string, number>;
   totalMachineCount: number;
 }
 

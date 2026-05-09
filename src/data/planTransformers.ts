@@ -4,11 +4,13 @@ import type { GameData } from '../types/domain';
 import type { ResourceNodeData } from '../components/phase2/nodes/ResourceNode';
 import type { RecipeNodeData } from '../components/phase2/nodes/RecipeNode';
 import type { ProductNodeData } from '../components/phase2/nodes/ProductNode';
+import type { ImportNodeData } from '../components/phase2/nodes/ImportNode';
 
 export type GraphNode =
   | Node<ResourceNodeData, 'resourceNode'>
   | Node<RecipeNodeData, 'recipeNode'>
-  | Node<ProductNodeData, 'productNode'>;
+  | Node<ProductNodeData, 'productNode'>
+  | Node<ImportNodeData, 'importNode'>;
 
 export interface GraphData {
   nodes: GraphNode[];
@@ -23,6 +25,7 @@ export const NODE_DIMENSIONS = {
     height: 110 + Math.max(inputCount, outputCount) * 36,
   }),
   product: { width: 210, height: 110 },
+  import: { width: 200, height: 90 },
 };
 
 function getMachineName(recipe: { producedInClassNames: string[] }, buildings: GameData['buildings']): string {
@@ -30,7 +33,6 @@ function getMachineName(recipe: { producedInClassNames: string[] }, buildings: G
     const building = buildings[cn];
     if (building) return building.name;
   }
-  // Fallback: derive a human name from the className
   const cn = recipe.producedInClassNames[0] ?? '';
   return cn.replace(/Build_|Mk\d_C|_C$/g, '').replace(/([a-z])([A-Z])/g, '$1 $2').trim() || 'Machine';
 }
@@ -51,7 +53,34 @@ function buildResourceNodesFromEdges(
 
     return {
       id: nodeId,
-      type: 'resourceNode',
+      type: 'resourceNode' as const,
+      position: { x: 0, y: 0 },
+      data: {
+        itemClassName,
+        itemName: item?.name ?? itemClassName,
+        ratePerMin: rate,
+      },
+    };
+  });
+}
+
+function buildImportNodesFromEdges(
+  edges: PlanEdge[],
+  gameData: GameData,
+  importUsage: Record<string, number>,
+): Node<ImportNodeData, 'importNode'>[] {
+  const importNodeIds = new Set(
+    edges.filter(e => e.fromNodeId.startsWith('import_')).map(e => e.fromNodeId),
+  );
+
+  return Array.from(importNodeIds).map(nodeId => {
+    const itemClassName = nodeId.replace('import_', '');
+    const item = gameData.items[itemClassName];
+    const rate = importUsage[itemClassName] ?? 0;
+
+    return {
+      id: nodeId,
+      type: 'importNode' as const,
       position: { x: 0, y: 0 },
       data: {
         itemClassName,
@@ -67,6 +96,7 @@ function buildRecipeNodes(
   gameData: GameData,
   manualMachineCounts: Record<string, number>,
   isManualMode: boolean,
+  targetItemClassNames: string[],
   onMachineCountChange: (recipeClassName: string, count: number) => void,
 ): Node<RecipeNodeData, 'recipeNode'>[] {
   return planNodes.map(planNode => {
@@ -92,7 +122,7 @@ function buildRecipeNodes(
 
     return {
       id: planNode.id,
-      type: 'recipeNode',
+      type: 'recipeNode' as const,
       position: { x: 0, y: 0 },
       data: {
         recipeClassName: planNode.recipeClassName,
@@ -102,6 +132,7 @@ function buildRecipeNodes(
         machineCountExact,
         inputRates,
         outputRates,
+        targetItemClassNames,
         isAlternate: recipe?.alternate ?? false,
         isManualMode,
         onMachineCountChange: (count: number) =>
@@ -115,22 +146,18 @@ function buildProductNodes(
   targets: ProductionTarget[],
   edges: PlanEdge[],
   gameData: GameData,
-  manualMachineCounts: Record<string, number>,
-  planNodes: PlanNode[],
-  isManualMode: boolean,
 ): Node<ProductNodeData, 'productNode'>[] {
   return targets.map(target => {
     const nodeId = `product_${target.itemClassName}`;
     const item = gameData.items[target.itemClassName];
 
-    // Sum all edges flowing into this product node
     const achievedRate = edges
       .filter(e => e.toNodeId === nodeId)
       .reduce((sum, e) => sum + e.ratePerMin, 0);
 
     return {
       id: nodeId,
-      type: 'productNode',
+      type: 'productNode' as const,
       position: { x: 0, y: 0 },
       data: {
         itemClassName: target.itemClassName,
@@ -144,17 +171,22 @@ function buildProductNodes(
 
 function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
   return planEdges.map(pe => {
-    const sourceHandle = pe.fromNodeId.startsWith('resource_')
-      ? 'out'
-      : `out_${pe.itemClassName}`;
-    const targetHandle = pe.toNodeId.startsWith('product_')
-      ? 'in'
-      : `in_${pe.itemClassName}`;
+    const isFromResource = pe.fromNodeId.startsWith('resource_');
+    const isFromImport = pe.fromNodeId.startsWith('import_');
+    const isToProduct = pe.toNodeId.startsWith('product_');
+
+    const sourceHandle = isFromResource || isFromImport ? 'out' : `out_${pe.itemClassName}`;
+    const targetHandle = isToProduct ? 'in' : `in_${pe.itemClassName}`;
 
     const item = gameData.items[pe.itemClassName];
     const isLiquid = item?.liquid ?? false;
     const unit = isLiquid ? 'm³/min' : '/min';
     const rateLabel = `${pe.ratePerMin.toFixed(1)}${unit}`;
+
+    let edgeColor = '#3a3a46';
+    if (isFromResource) edgeColor = '#0d9488';
+    else if (isFromImport) edgeColor = '#4f46e5';
+    else if (isToProduct) edgeColor = '#4ade80';
 
     return {
       id: pe.id,
@@ -166,7 +198,7 @@ function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
       label: rateLabel,
       labelStyle: { fontSize: 10, fill: '#8888a0' },
       labelBgStyle: { fill: '#25252d', fillOpacity: 0.85 },
-      style: { stroke: '#3a3a46', strokeWidth: 2 },
+      style: { stroke: edgeColor, strokeWidth: 2 },
       animated: false,
     };
   });
@@ -180,28 +212,23 @@ export function transformPlanToGraphData(
   isManualMode: boolean,
   onMachineCountChange: (recipeClassName: string, count: number) => void,
 ): GraphData {
+  const targetItemClassNames = targets.map(t => t.itemClassName);
+
   const resourceNodes = buildResourceNodesFromEdges(plan.edges, gameData, plan.resourceUsage);
+  const importNodes = buildImportNodesFromEdges(plan.edges, gameData, plan.importUsage ?? {});
   const recipeNodes = buildRecipeNodes(
     plan.nodes,
     gameData,
     manualMachineCounts,
     isManualMode,
+    targetItemClassNames,
     onMachineCountChange,
   );
-  const productNodes = buildProductNodes(
-    targets,
-    plan.edges,
-    gameData,
-    manualMachineCounts,
-    plan.nodes,
-    isManualMode,
-  );
-
+  const productNodes = buildProductNodes(targets, plan.edges, gameData);
   const rfEdges = buildRFEdges(plan.edges, gameData);
 
   return {
-    nodes: [...resourceNodes, ...recipeNodes, ...productNodes],
+    nodes: [...resourceNodes, ...importNodes, ...recipeNodes, ...productNodes],
     edges: rfEdges,
   };
 }
-

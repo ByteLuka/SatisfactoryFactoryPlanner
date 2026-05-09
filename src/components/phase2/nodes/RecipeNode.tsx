@@ -16,17 +16,15 @@ export interface RecipeNodeData extends Record<string, unknown> {
   machineCountExact: number;
   inputRates: ItemRate[];
   outputRates: ItemRate[];
+  targetItemClassNames: string[];
   isAlternate: boolean;
   isManualMode: boolean;
   onMachineCountChange: (count: number) => void;
 }
 
-const HANDLE_STYLE = {
-  background: '#2e2e38',
-  border: '2px solid #3a3a46',
-  width: 10,
-  height: 10,
-};
+const INPUT_COLOR = '#60a5fa';    // blue-400 — consumed ingredients
+const OUTPUT_COLOR = '#4ade80';   // green-400 — target products
+const BYPRODUCT_COLOR = '#fbbf24'; // amber-400 — byproducts (non-target outputs)
 
 const HANDLE_SPACING = 36;
 const HANDLE_OFFSET_START = 56;
@@ -42,6 +40,7 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
 
   const displayCount = Math.ceil(data.machineCountExact);
   const isExact = Math.abs(data.machineCountExact - displayCount) < 0.01;
+  const targetSet = new Set(data.targetItemClassNames);
 
   useEffect(() => {
     if (editingCount && inputRef.current) {
@@ -83,7 +82,6 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
           )}
         </div>
 
-        {/* Machine count */}
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[#8888a0] text-xs">{data.machineName}</span>
           <span className="text-[#3a3a46]">×</span>
@@ -120,17 +118,17 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
       <div className="flex">
         {/* Inputs */}
         <div className="flex-1 px-3 py-2 space-y-2 border-r border-[#3a3a46] relative">
-          {data.inputRates.map((ir, i) => (
+          {data.inputRates.map((ir) => (
             <div key={ir.itemClassName} className="relative" style={{ height: 28 }}>
               <Handle
                 type="target"
                 position={Position.Left}
                 id={`in_${ir.itemClassName}`}
-                style={{ ...HANDLE_STYLE, top: 14, left: -16 }}
+                style={{ background: '#1e3a5f', border: `2px solid ${INPUT_COLOR}`, width: 10, height: 10, top: 14, left: -16 }}
               />
               <div className="flex flex-col">
-                <span className="text-[#8888a0] text-[10px] truncate leading-tight">{ir.itemName}</span>
-                <span className="text-[#e8e8f0] text-[10px] font-mono">{ir.ratePerMin.toFixed(1)}/min</span>
+                <span className="text-[10px] truncate leading-tight" style={{ color: INPUT_COLOR }}>{ir.itemName}</span>
+                <span className="text-[10px] font-mono" style={{ color: INPUT_COLOR }}>{ir.ratePerMin.toFixed(1)}/min</span>
               </div>
             </div>
           ))}
@@ -141,20 +139,24 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
 
         {/* Outputs */}
         <div className="flex-1 px-3 py-2 space-y-2 relative">
-          {data.outputRates.map((or, i) => (
-            <div key={or.itemClassName} className="relative" style={{ height: 28 }}>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`out_${or.itemClassName}`}
-                style={{ ...HANDLE_STYLE, top: 14, right: -16 }}
-              />
-              <div className="flex flex-col items-end">
-                <span className="text-[#8888a0] text-[10px] truncate leading-tight">{or.itemName}</span>
-                <span className="text-[#e8e8f0] text-[10px] font-mono">{or.ratePerMin.toFixed(1)}/min</span>
+          {data.outputRates.map((or) => {
+            const isTarget = targetSet.has(or.itemClassName);
+            const color = isTarget ? OUTPUT_COLOR : BYPRODUCT_COLOR;
+            return (
+              <div key={or.itemClassName} className="relative" style={{ height: 28 }}>
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={`out_${or.itemClassName}`}
+                  style={{ background: isTarget ? '#14532d' : '#451a03', border: `2px solid ${color}`, width: 10, height: 10, top: 14, right: -16 }}
+                />
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] truncate leading-tight" style={{ color }}>{or.itemName}</span>
+                  <span className="text-[10px] font-mono" style={{ color }}>{or.ratePerMin.toFixed(1)}/min</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {data.outputRates.length === 0 && (
             <div className="text-[#8888a0] text-[10px] italic text-right">No outputs</div>
           )}

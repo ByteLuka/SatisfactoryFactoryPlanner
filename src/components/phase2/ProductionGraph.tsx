@@ -17,6 +17,7 @@ import type { PlanAction, NodePosition } from '../../store/PlanContext';
 import { ResourceNode } from './nodes/ResourceNode';
 import { RecipeNode } from './nodes/RecipeNode';
 import { ProductNode } from './nodes/ProductNode';
+import { ImportNode } from './nodes/ImportNode';
 import { transformPlanToGraphData } from '../../data/planTransformers';
 import { computeLayout } from '../../utils/graphLayout';
 
@@ -24,6 +25,7 @@ const nodeTypes = {
   resourceNode: ResourceNode,
   recipeNode: RecipeNode,
   productNode: ProductNode,
+  importNode: ImportNode,
 } as const;
 
 interface Props {
