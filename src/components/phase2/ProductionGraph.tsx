@@ -130,7 +130,17 @@ export function ProductionGraph({
       >
         <Background color="#3a3a46" gap={20} size={1} />
         <Controls
-          style={{ background: '#25252d', border: '1px solid #3a3a46', borderRadius: 6 }}
+          style={{
+            background: '#25252d',
+            border: '1px solid #3a3a46',
+            borderRadius: 6,
+            '--xy-controls-button-background-color': '#25252d',
+            '--xy-controls-button-background-color-hover': '#2e2e38',
+            '--xy-controls-button-color': '#8888a0',
+            '--xy-controls-button-color-hover': '#e8e8f0',
+            '--xy-controls-button-border-color': '#3a3a46',
+            '--xy-controls-box-shadow': 'none',
+          } as React.CSSProperties}
         />
       </ReactFlow>
 
