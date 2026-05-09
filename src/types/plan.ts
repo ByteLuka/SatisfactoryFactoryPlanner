@@ -2,9 +2,9 @@ import type { Recipe } from './domain';
 
 export enum OptimizationStrategy {
   MAX_OUTPUT = 'MAX_OUTPUT',
-  MIN_MACHINES = 'MIN_MACHINES',
-  MIN_RECIPES = 'MIN_RECIPES',
-  NONE = 'NONE',
+  BALANCED = 'BALANCED',
+  OPT_MACHINES = 'OPT_MACHINES',
+  OPT_RECIPES = 'OPT_RECIPES',
 }
 
 export interface ProductionTarget {

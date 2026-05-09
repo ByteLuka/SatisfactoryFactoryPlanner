@@ -53,9 +53,9 @@ function buildAndSolve(
         objCoeff += prodRate - consRate;
       }
       variable['objective'] = objCoeff;
-    } else if (strategy === OptimizationStrategy.NONE) {
-      variable['objective'] = 0;
     } else {
+      // BALANCED, MIN_MACHINES, MIN_RECIPES: all use fractional sum as the LP objective.
+      // MIN_MACHINES and MIN_RECIPES improve the result via post-processing in greedyEliminate.
       variable['objective'] = 1;
     }
 
@@ -97,6 +97,61 @@ function buildAndSolve(
     constraints,
     variables,
   });
+}
+
+// Greedy recipe elimination for MIN_MACHINES and MIN_RECIPES.
+//
+// Iterates over initially-active recipes sorted by machine count (smallest first). For each,
+// tries removing it from the allowed set and re-solving. Accepts the removal if the target
+// metric strictly improves. Because currentAllowed updates in-place after each successful
+// removal, later trials already benefit from earlier ones — the single pass chains
+// improvements together without requiring multiple iterations.
+function greedyEliminate(
+  initialResult: ReturnType<typeof Solver.Solve>,
+  allRecipes: Recipe[],
+  rawResources: Set<string>,
+  producibleItems: Set<string>,
+  targets: SolverInput['targets'],
+  resourceLimits: Record<string, number>,
+  manualInputs: ManualInput[],
+  metric: 'machines' | 'recipes',
+): ReturnType<typeof Solver.Solve> {
+  const recipeValue = (result: ReturnType<typeof Solver.Solve>, r: Recipe): number =>
+    (result[`recipe_${r.className}`] as number | undefined) ?? 0;
+
+  const computeMetric = (result: ReturnType<typeof Solver.Solve>, recipes: Recipe[]): number => {
+    if (metric === 'machines') {
+      return recipes
+        .filter(r => recipeValue(result, r) > 0.001)
+        .reduce((sum, r) => sum + Math.ceil(recipeValue(result, r)), 0);
+    }
+    return recipes.filter(r => recipeValue(result, r) > 0.001).length;
+  };
+
+  const initialActive = allRecipes.filter(r => recipeValue(initialResult, r) > 0.001);
+  const sorted = [...initialActive].sort((a, b) => recipeValue(initialResult, a) - recipeValue(initialResult, b));
+
+  let currentAllowed = [...allRecipes];
+  let currentResult = initialResult;
+  let currentMetric = computeMetric(initialResult, allRecipes);
+
+  for (const recipe of sorted) {
+    if (!currentAllowed.some(r => r.className === recipe.className)) continue;
+
+    const candidate = currentAllowed.filter(r => r.className !== recipe.className);
+    const trial = buildAndSolve(candidate, rawResources, producibleItems, targets, resourceLimits, OptimizationStrategy.BALANCED, manualInputs);
+
+    if (!trial.feasible) continue;
+
+    const trialMetric = computeMetric(trial, candidate);
+    if (trialMetric < currentMetric) {
+      currentAllowed = candidate;
+      currentResult = trial;
+      currentMetric = trialMetric;
+    }
+  }
+
+  return currentResult;
 }
 
 function computeEdges(
@@ -202,7 +257,7 @@ function buildInfeasibilityMessage(
     producibleItems,
     input.targets,
     {},
-    OptimizationStrategy.MIN_MACHINES,
+    OptimizationStrategy.BALANCED,
     input.manualInputs,
     true,
   );
@@ -299,9 +354,25 @@ function solve(input: SolverInput): SolverOutput {
     return { status: 'infeasible', errorMessage };
   }
 
+  // MIN_MACHINES and MIN_RECIPES improve the LP solution by greedily eliminating recipes
+  // whose removal reduces the target metric (ceiled machine count or active recipe count).
+  let finalResult = result;
+  if (strategy === OptimizationStrategy.OPT_MACHINES || strategy === OptimizationStrategy.OPT_RECIPES) {
+    finalResult = greedyEliminate(
+      result,
+      availableRecipes,
+      rawResources,
+      producibleItems,
+      targets,
+      resourceLimits,
+      manualInputs,
+      strategy === OptimizationStrategy.OPT_MACHINES ? 'machines' : 'recipes',
+    );
+  }
+
   const planNodes: PlanNode[] = [];
   for (const recipe of availableRecipes) {
-    const x = (result[`recipe_${recipe.className}`] as number | undefined) ?? 0;
+    const x = (finalResult[`recipe_${recipe.className}`] as number | undefined) ?? 0;
     if (x < 0.001) continue;
 
     const inputRates: Record<string, number> = {};
@@ -335,7 +406,7 @@ function solve(input: SolverInput): SolverOutput {
   // Import usage from manual inputs
   const importUsage: Record<string, number> = {};
   for (const mi of manualInputs) {
-    const rate = (result[`import_${mi.itemClassName}`] as number | undefined) ?? 0;
+    const rate = (finalResult[`import_${mi.itemClassName}`] as number | undefined) ?? 0;
     if (rate > 0.001) importUsage[mi.itemClassName] = rate;
   }
 

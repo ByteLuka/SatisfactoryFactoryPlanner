@@ -14,9 +14,9 @@ interface Props {
 }
 
 const OPTIMIZATION_LABELS: Partial<Record<OptimizationStrategy, string>> = {
-  [OptimizationStrategy.NONE]: 'No preference',
-  [OptimizationStrategy.MIN_MACHINES]: 'Minimize machines',
-  [OptimizationStrategy.MIN_RECIPES]: 'Minimize recipe diversity',
+  [OptimizationStrategy.BALANCED]: 'Balanced',
+  [OptimizationStrategy.OPT_MACHINES]: 'Optimize machines',
+  [OptimizationStrategy.OPT_RECIPES]: 'Optimize recipe diversity',
 };
 
 function ItemSearch({
@@ -112,9 +112,9 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
 
   // Optimization options that are user-selectable (not MAX_OUTPUT — that's implicit)
   const optimizationOptions = [
-    OptimizationStrategy.NONE,
-    OptimizationStrategy.MIN_MACHINES,
-    OptimizationStrategy.MIN_RECIPES,
+    OptimizationStrategy.BALANCED,
+    OptimizationStrategy.OPT_MACHINES,
+    OptimizationStrategy.OPT_RECIPES,
   ] as const;
 
   return (

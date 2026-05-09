@@ -69,7 +69,7 @@ Two React Context + `useReducer` stores:
 - `manualInputs` — items imported from external factories, each with a fixed supply rate
 - `disabledRecipes` — classNames of recipes the user has toggled off; all recipes are enabled by default
 - `resourcePool` — map-based or custom raw resource limits
-- `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | MIN_MACHINES | MIN_RECIPES | NONE`
+- `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | BALANCED | OPT_MACHINES | OPT_RECIPES`
 - `solverResult`, `manualMachineCounts`, `nodePositions`, `solverMode`, `layoutVersion`
 
 `Phase2Page` computes `effectiveStrategy`: if any target has no rate, strategy is forced to `MAX_OUTPUT` regardless of the `strategy` field. Disabled recipes are filtered out of `availableRecipes` before the solve call.
@@ -148,8 +148,8 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 - `FREELY_AVAILABLE_ITEMS` (Wood, Leaves, Mycelia, etc.) are excluded from `rawResources` and from recipe `inputRates` — they don't constrain the LP and don't appear as graph nodes
 - `OptimizationStrategy`:
   - `MAX_OUTPUT` — maximizes net production of unrated targets; auto-selected when any target has no rate
-  - `MIN_MACHINES` / `MIN_RECIPES` — minimizes `sum(machine count)`; requires all targets to have rates
-  - `NONE` — zero objective coefficients; LP finds any feasible solution
+  - `BALANCED` — minimizes `sum(fractional machine count)`; fast LP, good general-purpose default
+  - `OPT_MACHINES` / `OPT_RECIPES` — start with a `BALANCED` LP solve, then run `greedyEliminate()` which iteratively removes the lowest-usage active recipes (smallest fractional count first) and re-solves, accepting each removal only if the target metric strictly improves: ceiled machine count for `OPT_MACHINES`, active recipe count for `OPT_RECIPES`. Because the allowed-recipe set updates in-place after each accepted removal, later trials benefit from earlier ones — a single pass chains improvements. This is a heuristic (not globally optimal) but avoids MIP, which is too slow for the JS solver.
 - Infeasibility: re-runs without resource constraints to identify bottleneck resources vs. unproducible items
 
 **Graph node types and color semantics:**

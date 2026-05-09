@@ -46,7 +46,7 @@ function createInitialPlanState(): PlanState {
     manualInputs: [],
     disabledRecipes: [],
     resourcePool: DEFAULT_RESOURCE_POOL,
-    strategy: OptimizationStrategy.MIN_MACHINES,
+    strategy: OptimizationStrategy.BALANCED,
     solverResult: null,
     manualMachineCounts: {},
     nodePositions: {},
