@@ -194,6 +194,7 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
               manualMachineCounts={planState.manualMachineCounts}
               isManualMode={planState.solverMode === 'manual'}
               layoutVersion={planState.layoutVersion}
+              graphOptions={planState.graphOptions}
               dispatch={dispatch}
             />
           )}

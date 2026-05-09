@@ -63,6 +63,11 @@ export interface PlanEdge {
   ratePerMin: number;
 }
 
+export interface GraphOptions {
+  showResourceNodes: boolean;
+  showByproductNodes: boolean;
+}
+
 // Worker message protocol
 export type MainToWorker = { type: 'SOLVE'; payload: SolverInput };
 

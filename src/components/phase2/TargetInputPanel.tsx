@@ -332,6 +332,44 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
         )}
       </section>
 
+      {/* Graph display options */}
+      <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
+        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Graph Display</h3>
+        <div className="flex flex-col gap-2">
+          {(
+            [
+              { key: 'showResourceNodes', label: 'Resource nodes', description: 'Show raw material source nodes' },
+              { key: 'showByproductNodes', label: 'Byproduct nodes', description: 'Show unused output sink nodes' },
+            ] as const
+          ).map(({ key, label, description }) => {
+            const checked = planState.graphOptions[key];
+            return (
+              <div key={key} className="flex items-center justify-between gap-3">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm text-[#e8e8f0]">{label}</span>
+                  <span className="text-[10px] text-[#8888a0] mt-0.5">{description}</span>
+                </div>
+                <button
+                  onClick={() => dispatch({ type: 'SET_GRAPH_OPTION', key, value: !checked })}
+                  className={[
+                    'relative w-10 h-5 rounded-full transition-colors flex-shrink-0',
+                    checked ? 'bg-[#e8820c]' : 'bg-[#3a3a46]',
+                  ].join(' ')}
+                  title={`${checked ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+                >
+                  <span
+                    className={[
+                      'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
+                      checked ? 'translate-x-5' : '',
+                    ].join(' ')}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       {/* Mode toggle + Compute */}
       <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4 flex flex-col gap-3">
         {/* Solver / Manual toggle */}
@@ -361,8 +399,8 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
           >
             <span
               className={[
-                'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
-                solverMode === 'manual' ? 'translate-x-5' : 'translate-x-0.5',
+                'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
+                solverMode === 'manual' ? 'translate-x-5' : '',
               ].join(' ')}
             />
           </button>

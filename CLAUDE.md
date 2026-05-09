@@ -70,11 +70,12 @@ Two React Context + `useReducer` stores:
 - `disabledRecipes` — classNames of recipes the user has toggled off; all recipes are enabled by default
 - `resourcePool` — map-based or custom raw resource limits
 - `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | BALANCED | OPT_MACHINES | OPT_RECIPES`
+- `graphOptions: GraphOptions` — `{ showResourceNodes, showByproductNodes }` display toggles; when a type is hidden, its nodes and all incident edges are filtered out before layout
 - `solverResult`, `manualMachineCounts`, `nodePositions`, `solverMode`, `layoutVersion`
 
 `Phase2Page` computes `effectiveStrategy`: if any target has no rate, strategy is forced to `MAX_OUTPUT` regardless of the `strategy` field. Disabled recipes are filtered out of `availableRecipes` before the solve call.
 
-Both providers wrap all routes in `App.tsx`. State persists across navigation and across page reloads via `localStorage` (keys `sfp_game_state` and `sfp_plan_state`). Persistence is wired in the providers via `useEffect` on the state object — no special save action needed. `PlanState.solverResult` is deliberately excluded from localStorage (it's transient and re-derived by running the solver); it is always `null` on initial load.
+Both providers wrap all routes in `App.tsx`. State persists across navigation and across page reloads via `localStorage` (keys `sfp_game_state` and `sfp_plan_state`). Persistence is wired in the providers via `useEffect` on the state object — no special save action needed. `PlanState.solverResult` is deliberately excluded from localStorage (it's transient and re-derived by running the solver); it is always `null` on initial load. `loadPlanState` merges stored state over `createInitialPlanState()` defaults (`{ ...createInitialPlanState(), ...parsed, solverResult: null }`) so new fields added to `PlanState` automatically get their default values for users with old stored state — no migration step needed.
 
 ### Data loading
 
@@ -141,7 +142,8 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 - `src/hooks/useSolver.ts` — typed worker wrapper exposing `{ solve, status, result, cancel }`
 - `src/hooks/useAvailableRecipes.ts` — filters eligible recipes + builds producible item list
 - `src/utils/graphLayout.ts` — ELK `layered` layout (lazy-loaded)
-- `src/components/phase2/TargetInputPanel.tsx` — left sidebar: targets, imported inputs, optimization, resource pool, solver/manual toggle
+- `src/components/phase2/TargetInputPanel.tsx` — left sidebar: targets, imported inputs, optimization, resource pool, graph display toggles, solver/manual toggle
+- `src/components/phase2/ELKRouteEdge.tsx` — custom React Flow edge type that follows ELK-computed waypoints
 - `src/components/phase2/RecipeListPanel.tsx` — collapsible recipe toggle panel; grouped by machine; shows in-use indicator
 - `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout
 - `src/pages/Phase2Page.tsx` — outer (loading gate) + inner (hooks + layout); filters disabled recipes before solve
@@ -170,9 +172,13 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 
 **Byproduct detection** (`computeEdges` in `solver.worker.ts`): an item is a byproduct when it has recipe producers, no downstream consumers, and is not a production target. Its edge goes to a `byproduct_<itemClassName>` sink node. `ByproductNode` appears as a terminal node on the right side of the graph.
 
-**Graph layout:**
-- ELK `layered` algorithm, direction RIGHT
+**Graph layout (`src/utils/graphLayout.ts`):**
+- ELK `layered` algorithm, direction RIGHT, `NETWORK_SIMPLEX` node placement, `ORTHOGONAL` edge routing
+- Crossing minimization: `LAYER_SWEEP` strategy + `TWO_SIDED` greedy post-processing + `PREFER_EDGES` model-order hint. Edges are topologically sorted before being passed to ELK so model order hints are meaningful.
+- **Port-based routing:** every ELK node declares `FIXED_POS` ports matching the actual React Flow handle positions. Recipe nodes declare per-item input ports (left edge) and output ports (right edge) at `y = 90 + index × 36` (approximating the rendered flex layout). Simple nodes declare a single centered port on the appropriate side. This lets ELK route edges through distinct vertical channels rather than sharing node-center paths.
+- `computeLayout` returns `LayoutResult { nodePositions, edgeRoutes }`. `edgeRoutes` maps each edge ID to its ELK-computed bend points (extracted from `edge.sections[].bendPoints`).
 - Node size estimates in `planTransformers.ts`: resource/import/byproduct 200×90, recipe 260×(110+36×max(in,out)), product 210×110
+- **`ELKRouteEdge`** (`src/components/phase2/ELKRouteEdge.tsx`) — custom React Flow edge type (`'elkRoute'`). After layout, `ProductionGraph` stores the ELK bend points on each edge's `data.waypoints`. `ELKRouteEdge` renders a path through `[sourceHandle, ...waypoints, targetHandle]` with 8 px rounded corners (quadratic bezier), preventing edges from cutting through nodes. Falls back to `getSmoothStepPath` when no waypoints are present.
 - "Reset layout" re-runs ELK; dragging nodes uses React Flow's built-in state
 
 **Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar uses `overflow-y-auto`; the graph fills the remaining space via `flex-1`.

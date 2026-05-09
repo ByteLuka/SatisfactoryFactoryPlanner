@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { ProductionPlan, ProductionTarget } from '../../types/plan';
+import type { ProductionPlan, ProductionTarget, GraphOptions } from '../../types/plan';
 import type { GameData } from '../../types/domain';
 import type { PlanAction, NodePosition } from '../../store/PlanContext';
 import { ResourceNode } from './nodes/ResourceNode';
@@ -19,6 +19,7 @@ import { RecipeNode } from './nodes/RecipeNode';
 import { ProductNode } from './nodes/ProductNode';
 import { ImportNode } from './nodes/ImportNode';
 import { ByproductNode } from './nodes/ByproductNode';
+import { ELKRouteEdge } from './ELKRouteEdge';
 import { transformPlanToGraphData } from '../../data/planTransformers';
 import { computeLayout } from '../../utils/graphLayout';
 
@@ -30,6 +31,10 @@ const nodeTypes = {
   byproductNode: ByproductNode,
 } as const;
 
+const edgeTypes = {
+  elkRoute: ELKRouteEdge,
+} as const;
+
 interface Props {
   plan: ProductionPlan;
   targets: ProductionTarget[];
@@ -37,6 +42,7 @@ interface Props {
   manualMachineCounts: Record<string, number>;
   isManualMode: boolean;
   layoutVersion: number;
+  graphOptions: GraphOptions;
   dispatch: (action: PlanAction) => void;
 }
 
@@ -47,6 +53,7 @@ export function ProductionGraph({
   manualMachineCounts,
   isManualMode,
   layoutVersion,
+  graphOptions,
   dispatch,
 }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -71,20 +78,41 @@ export function ProductionGraph({
       handleMachineCountChange,
     );
 
+    const hiddenNodeTypes = new Set<string>();
+    if (!graphOptions.showResourceNodes) hiddenNodeTypes.add('resourceNode');
+    if (!graphOptions.showByproductNodes) hiddenNodeTypes.add('byproductNode');
+
+    const visibleNodes = hiddenNodeTypes.size > 0
+      ? rfNodes.filter(n => !hiddenNodeTypes.has(n.type ?? ''))
+      : rfNodes;
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+    const visibleEdges = hiddenNodeTypes.size > 0
+      ? rfEdges.filter(e => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target))
+      : rfEdges;
+
     const runId = ++layoutRunRef.current;
 
-    computeLayout(rfNodes, rfEdges).then(positions => {
+    computeLayout(visibleNodes, visibleEdges).then(({ nodePositions, edgeRoutes }) => {
       if (layoutRunRef.current !== runId) return; // stale
 
-      const layoutedNodes: Node[] = rfNodes.map(n => ({
+      const layoutedNodes: Node[] = visibleNodes.map(n => ({
         ...n,
-        position: positions.get(n.id) ?? n.position,
+        position: nodePositions.get(n.id) ?? n.position,
+      }));
+
+      const layoutedEdges: Edge[] = visibleEdges.map(e => ({
+        ...e,
+        type: 'elkRoute',
+        data: {
+          ...((e.data as Record<string, unknown>) ?? {}),
+          waypoints: edgeRoutes.get(e.id ?? `${e.source}_${e.target}`) ?? [],
+        },
       }));
 
       setNodes(layoutedNodes);
-      setEdges(rfEdges);
+      setEdges(layoutedEdges);
     });
-  }, [plan, targets, gameData, isManualMode, layoutVersion, handleMachineCountChange]);
+  }, [plan, targets, gameData, isManualMode, layoutVersion, graphOptions, handleMachineCountChange]);
 
   // Update only data when manual counts change (avoid re-layout)
   useEffect(() => {
@@ -120,6 +148,7 @@ export function ProductionGraph({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         fitView

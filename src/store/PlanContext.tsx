@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
-import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput } from '../types/plan';
+import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput, GraphOptions } from '../types/plan';
 import { OptimizationStrategy } from '../types/plan';
 import { DEFAULT_RESOURCE_POOL } from '../data/resources';
 
@@ -21,6 +21,7 @@ export interface PlanState {
   manualMachineCounts: Record<string, number>;
   nodePositions: Record<string, NodePosition>;
   layoutVersion: number;
+  graphOptions: GraphOptions;
 }
 
 export type PlanAction =
@@ -39,7 +40,8 @@ export type PlanAction =
   | { type: 'TOGGLE_RECIPE'; recipeClassName: string }
   | { type: 'SET_ALL_RECIPES'; classNames: string[]; enabled: boolean }
   | { type: 'SET_NODE_POSITIONS'; positions: Record<string, NodePosition> }
-  | { type: 'RESET_LAYOUT' };
+  | { type: 'RESET_LAYOUT' }
+  | { type: 'SET_GRAPH_OPTION'; key: keyof GraphOptions; value: boolean };
 
 function createInitialPlanState(): PlanState {
   return {
@@ -53,6 +55,7 @@ function createInitialPlanState(): PlanState {
     manualMachineCounts: {},
     nodePositions: {},
     layoutVersion: 0,
+    graphOptions: { showResourceNodes: true, showByproductNodes: true },
   };
 }
 
@@ -63,7 +66,7 @@ function loadPlanState(): PlanState {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as PersistedPlanState;
-      return { ...parsed, solverResult: null };
+      return { ...createInitialPlanState(), ...parsed, solverResult: null };
     }
   } catch {}
   return createInitialPlanState();
@@ -186,6 +189,9 @@ function planReducer(state: PlanState, action: PlanAction): PlanState {
 
     case 'RESET_LAYOUT':
       return { ...state, nodePositions: {}, layoutVersion: state.layoutVersion + 1 };
+
+    case 'SET_GRAPH_OPTION':
+      return { ...state, graphOptions: { ...state.graphOptions, [action.key]: action.value } };
 
     default:
       return state;
