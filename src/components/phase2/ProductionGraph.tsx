@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -58,6 +58,7 @@ export function ProductionGraph({
 }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [highlightedEdgeIds, setHighlightedEdgeIds] = useState<Set<string>>(new Set());
   const layoutRunRef = useRef(0);
 
   const handleMachineCountChange = useCallback(
@@ -111,6 +112,7 @@ export function ProductionGraph({
 
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
+      setHighlightedEdgeIds(new Set());
     });
   }, [plan, targets, gameData, isManualMode, layoutVersion, graphOptions, handleMachineCountChange]);
 
@@ -142,15 +144,50 @@ export function ProductionGraph({
     [onNodesChange],
   );
 
+  const handleEdgeClick = useCallback((_evt: React.MouseEvent, clickedEdge: Edge) => {
+    setHighlightedEdgeIds(prev => {
+      const isAlreadyOnly = prev.size === 1 && prev.has(clickedEdge.id);
+      return isAlreadyOnly ? new Set() : new Set([clickedEdge.id]);
+    });
+  }, []);
+
+  const handleNodeClick = useCallback((_evt: React.MouseEvent, node: Node) => {
+    setHighlightedEdgeIds(() => {
+      const connectedIds = new Set(
+        edges.filter(e => e.source === node.id || e.target === node.id).map(e => e.id),
+      );
+      return connectedIds;
+    });
+  }, [edges]);
+
+  const handlePaneClick = useCallback(() => {
+    setHighlightedEdgeIds(new Set());
+  }, []);
+
+  const hasHighlight = highlightedEdgeIds.size > 0;
+
+  const displayEdges = useMemo(() =>
+    edges.map(e => ({
+      ...e,
+      className: highlightedEdgeIds.has(e.id) ? 'edge-highlighted' : undefined,
+      data: { ...(e.data as Record<string, unknown>), highlighted: highlightedEdgeIds.has(e.id) },
+    })),
+    [edges, highlightedEdgeIds],
+  );
+
   return (
-    <div className="w-full h-full relative">
+    <div className={`w-full h-full relative${hasHighlight ? ' graph-has-highlight' : ''}`}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={displayEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
+        onEdgeClick={handleEdgeClick}
+        onNodeClick={handleNodeClick}
+        onPaneClick={handlePaneClick}
+        nodesConnectable={false}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.1}

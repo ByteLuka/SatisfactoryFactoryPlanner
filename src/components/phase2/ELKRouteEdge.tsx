@@ -35,6 +35,8 @@ export function ELKRouteEdge(props: EdgeProps) {
   } = props;
 
   const waypoints = (data?.waypoints as Waypoint[] | undefined) ?? [];
+  const highlighted = (data?.highlighted as boolean | undefined) ?? false;
+  const edgeColor = (style?.stroke as string | undefined) ?? '#3a3a46';
 
   let edgePath: string;
   let labelX: number;
@@ -56,6 +58,22 @@ export function ELKRouteEdge(props: EdgeProps) {
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {highlighted && (
+        <path
+          d={edgePath}
+          fill="none"
+          stroke={edgeColor}
+          strokeWidth={3}
+          strokeDasharray="16 8"
+          strokeLinecap="round"
+          style={{
+            animation: 'edge-flow 0.6s linear infinite',
+            filter: `drop-shadow(0 0 5px ${edgeColor})`,
+            opacity: 0.95,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       {label && (
         <EdgeLabelRenderer>
           <div

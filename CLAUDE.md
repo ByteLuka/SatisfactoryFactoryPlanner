@@ -178,8 +178,16 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 - **Port-based routing:** every ELK node declares `FIXED_POS` ports matching the actual React Flow handle positions. Recipe nodes declare per-item input ports (left edge) and output ports (right edge) at `y = 90 + index × 36` (approximating the rendered flex layout). Simple nodes declare a single centered port on the appropriate side. This lets ELK route edges through distinct vertical channels rather than sharing node-center paths.
 - `computeLayout` returns `LayoutResult { nodePositions, edgeRoutes }`. `edgeRoutes` maps each edge ID to its ELK-computed bend points (extracted from `edge.sections[].bendPoints`).
 - Node size estimates in `planTransformers.ts`: resource/import/byproduct 200×90, recipe 260×(110+36×max(in,out)), product 210×110
-- **`ELKRouteEdge`** (`src/components/phase2/ELKRouteEdge.tsx`) — custom React Flow edge type (`'elkRoute'`). After layout, `ProductionGraph` stores the ELK bend points on each edge's `data.waypoints`. `ELKRouteEdge` renders a path through `[sourceHandle, ...waypoints, targetHandle]` with 8 px rounded corners (quadratic bezier), preventing edges from cutting through nodes. Falls back to `getSmoothStepPath` when no waypoints are present.
+- **`ELKRouteEdge`** (`src/components/phase2/ELKRouteEdge.tsx`) — custom React Flow edge type (`'elkRoute'`). After layout, `ProductionGraph` stores the ELK bend points on each edge's `data.waypoints`. `ELKRouteEdge` renders a path through `[sourceHandle, ...waypoints, targetHandle]` with 8 px rounded corners (quadratic bezier), preventing edges from cutting through nodes. Falls back to `getSmoothStepPath` when no waypoints are present. When `data.highlighted` is true, a second `<path>` is rendered over the base edge with `stroke-dasharray="16 8"` and the `edge-flow` CSS animation (`@keyframes` in `index.css`) to produce a flowing-dash effect in the edge's own color.
 - "Reset layout" re-runs ELK; dragging nodes uses React Flow's built-in state
+
+**Graph interaction (edge/node highlighting):**
+- `ProductionGraph` maintains `highlightedEdgeIds: Set<string>` state. `displayEdges` is a `useMemo` that layers `className: 'edge-highlighted'` and `data.highlighted: true` onto matching edges before passing to ReactFlow — the underlying `edges` state (managed by `useEdgesState`) is never mutated for highlighting, so layout re-runs can safely call `setEdges(layoutedEdges)` without losing the highlight layer.
+- `onEdgeClick` — click once to highlight that edge exclusively; click the same edge again to clear.
+- `onNodeClick` — highlights all edges where `source === node.id || target === node.id`.
+- `onPaneClick` — clears all highlights. Highlights also clear automatically when a new layout runs.
+- When any edge is highlighted, the outer `<div>` gains the `graph-has-highlight` CSS class, which dims all `.react-flow__edge-path` elements not inside `.edge-highlighted` to 15% opacity (defined in `index.css`).
+- `nodesConnectable={false}` on the `ReactFlow` component disables drag-to-connect; `.react-flow__handle { cursor: default !important }` in `index.css` removes the crosshair cursor from all handles.
 
 **Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar uses `overflow-y-auto`; the graph fills the remaining space via `flex-1`.
 

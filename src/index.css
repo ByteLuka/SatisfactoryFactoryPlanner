@@ -10,3 +10,20 @@
   --color-sf-text: #e8e8f0;
   --color-sf-text-muted: #8888a0;
 }
+
+/* Flowing dash animation for highlighted graph edges (source → target direction) */
+@keyframes edge-flow {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Dim all edges when some are highlighted; exempt the highlighted ones */
+.graph-has-highlight .react-flow__edge:not(.edge-highlighted) .react-flow__edge-path {
+  opacity: 0.15;
+  transition: opacity 0.2s;
+}
+
+/* Disable crosshair cursor on node handles — connections are not supported */
+.react-flow__handle {
+  cursor: default !important;
+}
