@@ -1,3 +1,10 @@
+## [0.1.2](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.1.1...v0.1.2) (2026-05-10)
+
+
+### Bug Fixes
+
+* **ghrc:** give the container registry the correct name ([22c2cf4](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/22c2cf408538c401f60a85ff9887840399bf89f8))
+
 ## [0.1.1](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.1.0...v0.1.1) (2026-05-10)
 
 
