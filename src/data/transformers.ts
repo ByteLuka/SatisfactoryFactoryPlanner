@@ -46,6 +46,9 @@ function transformRecipe(raw: RawRecipe, rawItems: RawGameData['items']): Recipe
     inHand: raw.inHand,
     forBuilding: raw.forBuilding,
     inMachine: raw.inMachine,
+    isVariablePower: raw.isVariablePower,
+    minPower: raw.minPower,
+    maxPower: raw.maxPower,
   };
 }
 
@@ -66,6 +69,8 @@ function transformBuilding(className: string, raw: RawBuilding): Building {
     name: raw.name,
     slug: raw.slug,
     description: raw.description,
+    powerConsumption: raw.metadata.powerConsumption,
+    powerConsumptionExponent: raw.metadata.powerConsumptionExponent,
   };
 }
 

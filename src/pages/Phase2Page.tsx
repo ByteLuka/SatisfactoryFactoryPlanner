@@ -52,6 +52,44 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
   const activePlan =
     planState.solverResult?.status === 'optimal' ? planState.solverResult.plan : undefined;
 
+  const powerStats = useMemo(() => {
+    if (!activePlan) return null;
+
+    let minNotUnderclocked = 0;
+    let maxNotUnderclocked = 0;
+    let minUnderclocked = 0;
+    let maxUnderclocked = 0;
+
+    for (const node of activePlan.nodes) {
+      const recipe = gameData.recipes[node.recipeClassName];
+      if (!recipe) continue;
+      const buildingClassName = recipe.producedInClassNames.find(cn => gameData.buildings[cn]);
+      const building = buildingClassName ? gameData.buildings[buildingClassName] : undefined;
+      if (!building) continue;
+
+      if (!Number.isFinite(building.powerConsumption) || !Number.isFinite(building.powerConsumptionExponent)) continue;
+
+      const exact = planState.manualMachineCounts[node.id] ?? node.machineCount;
+      const ceiled = Math.ceil(exact);
+      const full = Math.floor(exact);
+      const frac = exact - full;
+      const exponent = building.powerConsumptionExponent;
+
+      const basePowerMin = recipe.isVariablePower ? recipe.minPower : building.powerConsumption;
+      const basePowerMax = recipe.isVariablePower ? recipe.maxPower : building.powerConsumption;
+
+      minNotUnderclocked += ceiled * basePowerMin;
+      maxNotUnderclocked += ceiled * basePowerMax;
+
+      const underclockedMin = full * basePowerMin + (frac > 0 ? basePowerMin * Math.pow(frac, exponent) : 0);
+      const underclockedMax = full * basePowerMax + (frac > 0 ? basePowerMax * Math.pow(frac, exponent) : 0);
+      minUnderclocked += underclockedMin;
+      maxUnderclocked += underclockedMax;
+    }
+
+    return { minNotUnderclocked, maxNotUnderclocked, minUnderclocked, maxUnderclocked };
+  }, [activePlan, gameData, planState.manualMachineCounts]);
+
   const errorMessage =
     planState.solverResult && planState.solverResult.status !== 'optimal'
       ? planState.solverResult.errorMessage
@@ -120,6 +158,33 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
                     <span className="text-[#8888a0]">Distinct recipes</span>
                     <span className="text-[#e8e8f0] font-mono">{activePlan.nodes.length}</span>
                   </div>
+                  {powerStats && (
+                    <div className="mt-3 pt-3 border-t border-[#3a3a46]">
+                      <p className="text-[#8888a0] text-xs font-semibold mb-2">Power usage</p>
+                      <div className="mb-2">
+                        <p className="text-[#8888a0] text-xs mb-1">All at 100% clock</p>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-[#8888a0] pl-2">Min</span>
+                          <span className="text-[#e8e8f0] font-mono">{powerStats.minNotUnderclocked.toFixed(1)} MW</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[#8888a0] pl-2">Max</span>
+                          <span className="text-[#e8e8f0] font-mono">{powerStats.maxNotUnderclocked.toFixed(1)} MW</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[#8888a0] text-xs mb-1">With underclocking</p>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-[#8888a0] pl-2">Min</span>
+                          <span className="text-[#e8e8f0] font-mono">{powerStats.minUnderclocked.toFixed(1)} MW</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[#8888a0] pl-2">Max</span>
+                          <span className="text-[#e8e8f0] font-mono">{powerStats.maxUnderclocked.toFixed(1)} MW</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {Object.keys(activePlan.resourceUsage).length > 0 && (
                     <div className="mt-3 pt-3 border-t border-[#3a3a46]">
                       <p className="text-[#8888a0] text-xs font-semibold mb-2">Resource usage</p>

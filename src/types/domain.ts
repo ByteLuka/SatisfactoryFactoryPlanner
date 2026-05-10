@@ -49,6 +49,9 @@ export interface Recipe {
   inHand: boolean;
   forBuilding: boolean;
   inMachine: boolean;
+  isVariablePower: boolean;
+  minPower: number;
+  maxPower: number;
 }
 
 export interface Item {
@@ -65,6 +68,8 @@ export interface Building {
   name: string;
   slug: string;
   description: string;
+  powerConsumption: number;
+  powerConsumptionExponent: number;
 }
 
 /** A named MAM research tree (e.g. "Caterium", "Quartz"). */

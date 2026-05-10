@@ -82,6 +82,8 @@ Both providers wrap all routes in `App.tsx`. State persists across navigation an
 
 `src/hooks/useGameData.ts` — wraps `loadGameData()` in a React hook exposing a `LoadState` discriminated union (`loading | success | error`). Module-level `cachedData` means the four JSON fetches happen only once per session. Pages gate rendering on `status === 'success'`.
 
+**HMR stale-cache caveat:** When Vite HMR re-evaluates `transformers.ts` or `domain.ts`, `cachedData` resets to `null` but the React component keeps its old `GameData` in `useState` — `useEffect([], [])` doesn't re-run on re-render, only on mount. Any new domain fields (e.g. `Building.powerConsumption`) will be `undefined` at runtime until the user does a hard refresh (Ctrl+Shift+R). Add `Number.isFinite()` guards when reading newly-added numeric fields to prevent NaN propagation during development.
+
 ### Data shape (generated JSON files)
 
 Each file is a `Record<className, Raw*>` object. `buildings.json` contains only the 11 manufacturer buildings (keyed by `Build_*_C`); structural/decorative buildings are excluded.
@@ -103,6 +105,8 @@ Raw recipe ingredient/product amounts for liquid items (`Item.liquid === true`) 
 ### Recipe classification
 
 `RawRecipe` has four boolean flags: `inMachine`, `inHand`, `inWorkshop`, `forBuilding`. The domain `Recipe` type omits `inWorkshop` — stripped in `transformers.ts`. MAM tree nodes that only unlock `forBuilding` recipes are excluded from `buildMamTrees`.
+
+Three power fields also pass through from raw to domain `Recipe`: `isVariablePower`, `minPower`, `maxPower`. Variable-power recipes (Particle Accelerator, Converter, Quantum Encoder) ignore the building's `powerConsumption` baseline and instead draw between `minPower` and `maxPower` MW per machine. The domain `Building` type exposes `powerConsumption` and `powerConsumptionExponent` (read from `metadata.*` in `buildings.json`; exponent is `~1.321928` for all current buildings). The underclocking formula is `power = basePower × (clockSpeed/100)^exponent`; `Phase2Page.tsx`'s `powerStats` memo applies this to compute four Plan Summary statistics (min/max × all-at-100% / with-underclock).
 
 ### Alternate recipe eligibility (`src/utils/alternateEligibility.ts`)
 
