@@ -1,0 +1,6 @@
+apiVersion: v2
+name: satisfactory-factory-planner
+description: A browser-based Satisfactory factory planner
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

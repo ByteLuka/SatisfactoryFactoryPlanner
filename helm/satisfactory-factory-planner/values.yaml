@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/byteluka/satisfactory-factory-planner
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to Chart.appVersion
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: satisfactory.example.com
+  tls: []
+  #  - secretName: satisfactory-tls
+  #    hosts:
+  #      - satisfactory.example.com
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
