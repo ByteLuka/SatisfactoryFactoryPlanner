@@ -168,7 +168,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 | `ProductNode` | Orange (`#e8820c` border) | Production target |
 | `ByproductNode` | Rose (`#be185d` border) | Recipe output not consumed by any downstream recipe and not a production target |
 
-Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs are green (`#4ade80`), other outputs are amber (`#fbbf24`). Edge colors match the source/destination: teal from resource, indigo from import, green to product, rose to byproduct, neutral between recipes.
+Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs are green (`#4ade80`), other outputs are amber (`#fbbf24`). All edges use the same neutral color (`#3a3a46`).
 
 **Byproduct detection** (`computeEdges` in `solver.worker.ts`): an item is a byproduct when it has recipe producers, no downstream consumers, and is not a production target. Its edge goes to a `byproduct_<itemClassName>` sink node. `ByproductNode` appears as a terminal node on the right side of the graph.
 

@@ -220,11 +220,7 @@ function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
     const unit = isLiquid ? 'm³/min' : '/min';
     const rateLabel = `${pe.ratePerMin.toFixed(1)}${unit}`;
 
-    let edgeColor = '#3a3a46';
-    if (isFromResource) edgeColor = '#0d9488';
-    else if (isFromImport) edgeColor = '#4f46e5';
-    else if (isToProduct) edgeColor = '#4ade80';
-    else if (isToByproduct) edgeColor = '#be185d';
+    const edgeColor = '#3a3a46';
 
     return {
       id: pe.id,
