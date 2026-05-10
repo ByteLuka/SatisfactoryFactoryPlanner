@@ -144,7 +144,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 - `src/utils/graphLayout.ts` — ELK `layered` layout (lazy-loaded)
 - `src/components/phase2/TargetInputPanel.tsx` — left sidebar: targets, imported inputs, optimization, resource pool, graph display toggles, solver/manual toggle
 - `src/components/phase2/ELKRouteEdge.tsx` — custom React Flow edge type that follows ELK-computed waypoints
-- `src/components/phase2/RecipeListPanel.tsx` — collapsible recipe toggle panel; grouped by machine; shows in-use indicator
+- `src/components/phase2/RecipeListPanel.tsx` — recipe toggle panel (expanded by default); grouped by machine; shows in-use indicator
 - `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout
 - `src/pages/Phase2Page.tsx` — outer (loading gate) + inner (hooks + layout); filters disabled recipes before solve
 
@@ -187,9 +187,9 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 - `onNodeClick` — highlights all edges where `source === node.id || target === node.id`.
 - `onPaneClick` — clears all highlights. Highlights also clear automatically when a new layout runs.
 - When any edge is highlighted, the outer `<div>` gains the `graph-has-highlight` CSS class, which dims all `.react-flow__edge-path` elements not inside `.edge-highlighted` to 15% opacity (defined in `index.css`).
-- `nodesConnectable={false}` on the `ReactFlow` component disables drag-to-connect; `.react-flow__handle { cursor: default !important }` in `index.css` removes the crosshair cursor from all handles.
+- `nodesConnectable={false}` and `edgesReconnectable={false}` on the `ReactFlow` component disable drag-to-connect and drag-to-reconnect respectively; `.react-flow__handle { cursor: default !important }` in `index.css` removes the crosshair cursor from all handles.
 
-**Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar uses `overflow-y-auto`; the graph fills the remaining space via `flex-1`.
+**Phase 2 page layout:** The outer container uses `h-screen overflow-hidden flex flex-col` so the document never becomes scrollable. The sidebar `<aside>` is a plain block element with `overflow-y-auto` — it must NOT be a flex container, because a flex column measures its own height from its children and `overflow-y-auto` never activates. An inner `<div className="flex flex-col gap-4">` provides the spacing layout. The graph fills the remaining space via `flex-1`.
 
 ### Routing
 

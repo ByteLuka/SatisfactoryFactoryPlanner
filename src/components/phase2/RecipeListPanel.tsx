@@ -31,7 +31,7 @@ export function RecipeListPanel({
   gameData,
   dispatch,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 

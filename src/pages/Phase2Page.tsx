@@ -97,58 +97,60 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
       {/* Main content: sidebar + graph */}
       <div className="flex flex-1 min-h-0">
         {/* Left panel */}
-        <aside className="w-80 flex-shrink-0 border-r border-[#3a3a46] overflow-y-auto p-4 flex flex-col gap-4">
-          <TargetInputPanel
-            planState={planState}
-            dispatch={dispatch}
-            producibleItems={producibleItems}
-            onCompute={handleCompute}
-            solverStatus={solverStatus}
-          />
+        <aside className="w-80 flex-shrink-0 border-r border-[#3a3a46] overflow-y-auto">
+          <div className="p-4 flex flex-col gap-4">
+            <TargetInputPanel
+              planState={planState}
+              dispatch={dispatch}
+              producibleItems={producibleItems}
+              onCompute={handleCompute}
+              solverStatus={solverStatus}
+            />
 
-          {/* Plan summary */}
-          {activePlan && (
-            <div className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-              <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Plan Summary</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#8888a0]">Total machines</span>
-                  <span className="text-[#e8e8f0] font-mono">{activePlan.totalMachineCount}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-[#8888a0]">Distinct recipes</span>
-                  <span className="text-[#e8e8f0] font-mono">{activePlan.nodes.length}</span>
-                </div>
-                {Object.keys(activePlan.resourceUsage).length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-[#3a3a46]">
-                    <p className="text-[#8888a0] text-xs font-semibold mb-2">Resource usage</p>
-                    {Object.entries(activePlan.resourceUsage).map(([cn, rate]) => {
-                      const item = gameData.items[cn];
-                      const name = item?.name ?? cn.replace('Desc_', '').replace('_C', '');
-                      const unit = item?.liquid ? ' m³/min' : '/min';
-                      return (
-                        <div key={cn} className="flex justify-between text-xs mb-1">
-                          <span className="text-[#8888a0] truncate flex-1">{name}</span>
-                          <span className="text-[#e8e8f0] font-mono ml-2">
-                            {rate.toFixed(1)}{unit}
-                          </span>
-                        </div>
-                      );
-                    })}
+            {/* Plan summary */}
+            {activePlan && (
+              <div className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
+                <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Plan Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#8888a0]">Total machines</span>
+                    <span className="text-[#e8e8f0] font-mono">{activePlan.totalMachineCount}</span>
                   </div>
-                )}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-[#8888a0]">Distinct recipes</span>
+                    <span className="text-[#e8e8f0] font-mono">{activePlan.nodes.length}</span>
+                  </div>
+                  {Object.keys(activePlan.resourceUsage).length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#3a3a46]">
+                      <p className="text-[#8888a0] text-xs font-semibold mb-2">Resource usage</p>
+                      {Object.entries(activePlan.resourceUsage).map(([cn, rate]) => {
+                        const item = gameData.items[cn];
+                        const name = item?.name ?? cn.replace('Desc_', '').replace('_C', '');
+                        const unit = item?.liquid ? ' m³/min' : '/min';
+                        return (
+                          <div key={cn} className="flex justify-between text-xs mb-1">
+                            <span className="text-[#8888a0] truncate flex-1">{name}</span>
+                            <span className="text-[#e8e8f0] font-mono ml-2">
+                              {rate.toFixed(1)}{unit}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Recipe toggles */}
-          <RecipeListPanel
-            availableRecipes={availableRecipes}
-            disabledRecipes={planState.disabledRecipes}
-            activeRecipeClassNames={activeRecipeClassNames}
-            gameData={gameData}
-            dispatch={dispatch}
-          />
+            {/* Recipe toggles */}
+            <RecipeListPanel
+              availableRecipes={availableRecipes}
+              disabledRecipes={planState.disabledRecipes}
+              activeRecipeClassNames={activeRecipeClassNames}
+              gameData={gameData}
+              dispatch={dispatch}
+            />
+          </div>
         </aside>
 
         {/* Graph area */}
