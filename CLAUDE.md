@@ -23,11 +23,12 @@ npm run dev          # Vite dev server with HMR at localhost:5173
 npm run build        # preprocess (if needed) + tsc + Vite production build → dist/
 npm run preview      # serve the production build locally
 npm run preprocess   # parse satisfactory-assets/en-US.json → public/generated/data/
+npx tsc --noEmit     # type-check without building (no separate lint script exists)
 ```
 
 `prebuild` runs `preprocess` automatically — skips if outputs are newer than the source. `npm run dev` does NOT auto-preprocess; run it manually when source data changes.
 
-No test runner or linter is configured yet.
+No test runner or linter is configured yet. `tsc --noEmit` is the only static analysis available.
 
 ## Stack
 
@@ -138,7 +139,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 - `src/types/plan.ts` — all Phase 2 types (`OptimizationStrategy`, `ProductionTarget`, `ManualInput`, `SolverInput`, `ProductionPlan`, etc.)
 - `src/data/resources.ts` — hardcoded full-map resource pool limits; `FREELY_AVAILABLE_ITEMS` set (Wood, Leaves, Mycelia, etc.)
 - `src/data/planTransformers.ts` — `transformPlanToGraphData()`: `ProductionPlan → React Flow nodes/edges`
-- `src/workers/solver.worker.ts` — LP solver Web Worker
+- `src/workers/solver.worker.ts` — LP solver Web Worker; instantiated via Vite's `new Worker(new URL('../workers/solver.worker.ts', import.meta.url), { type: 'module' })` pattern — do not use a string path
 - `src/hooks/useSolver.ts` — typed worker wrapper exposing `{ solve, status, result, cancel }`
 - `src/hooks/useAvailableRecipes.ts` — filters eligible recipes + builds producible item list
 - `src/utils/graphLayout.ts` — ELK `layered` layout (lazy-loaded)
@@ -178,7 +179,7 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 - **Port-based routing:** every ELK node declares `FIXED_POS` ports matching the actual React Flow handle positions. Recipe nodes declare per-item input ports (left edge) and output ports (right edge) at `y = 90 + index × 36` (approximating the rendered flex layout). Simple nodes declare a single centered port on the appropriate side. This lets ELK route edges through distinct vertical channels rather than sharing node-center paths.
 - `computeLayout` returns `LayoutResult { nodePositions, edgeRoutes }`. `edgeRoutes` maps each edge ID to its ELK-computed bend points (extracted from `edge.sections[].bendPoints`).
 - Node size estimates in `planTransformers.ts`: resource/import/byproduct 200×90, recipe 260×(110+36×max(in,out)), product 210×110
-- **`ELKRouteEdge`** (`src/components/phase2/ELKRouteEdge.tsx`) — custom React Flow edge type (`'elkRoute'`). After layout, `ProductionGraph` stores the ELK bend points on each edge's `data.waypoints`. `ELKRouteEdge` renders a path through `[sourceHandle, ...waypoints, targetHandle]` with 8 px rounded corners (quadratic bezier), preventing edges from cutting through nodes. Falls back to `getSmoothStepPath` when no waypoints are present. When `data.highlighted` is true, a second `<path>` is rendered over the base edge with `stroke-dasharray="16 8"` and the `edge-flow` CSS animation (`@keyframes` in `index.css`) to produce a flowing-dash effect in the edge's own color.
+- **`ELKRouteEdge`** (`src/components/phase2/ELKRouteEdge.tsx`) — custom React Flow edge type (`'elkRoute'`). After layout, `ProductionGraph` stores the ELK bend points on each edge's `data.waypoints`. `ELKRouteEdge` renders a path through `[sourceHandle, ...waypoints, targetHandle]` with 8 px rounded corners (quadratic bezier). Because `data.waypoints` are frozen at layout time, two runtime corrections apply when nodes are dragged: (1) the first/last waypoints' transverse axis is snapped to `sourceY`/`targetY` to keep entry/exit segments orthogonal; (2) if after snapping a waypoint falls on the wrong side of its handle (backward path), `buildOrthogonalFallback` computes a fresh minimal path — a 3-segment S-shape when the target is ahead, a U-shape when behind. Falls back to `getSmoothStepPath` when no waypoints are present. When `data.highlighted` is true, a second `<path>` is rendered over the base edge with `stroke-dasharray="16 8"` and the `edge-flow` CSS animation (`@keyframes` in `index.css`) to produce a flowing-dash effect in the edge's own color.
 - "Reset layout" re-runs ELK; dragging nodes uses React Flow's built-in state
 
 **Graph interaction (edge/node highlighting):**

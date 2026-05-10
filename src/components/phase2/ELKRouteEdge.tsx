@@ -1,4 +1,4 @@
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, Position } from '@xyflow/react';
 import type { EdgeProps } from '@xyflow/react';
 
 interface Waypoint { x: number; y: number; }
@@ -27,6 +27,53 @@ function buildRoutedPath(points: Waypoint[], cornerRadius = 8): string {
   return d;
 }
 
+// Computes a fresh orthogonal path when ELK waypoints would create a backward route.
+// Returns all points including source and target.
+function buildOrthogonalFallback(
+  sx: number, sy: number, sourcePosition: Position,
+  tx: number, ty: number, targetPosition: Position,
+): Waypoint[] {
+  const offset = 40;
+
+  if (sourcePosition === Position.Right && targetPosition === Position.Left) {
+    if (tx >= sx) {
+      // Target is ahead: simple 3-segment S-shape
+      const midX = (sx + tx) / 2;
+      return [{ x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ty }, { x: tx, y: ty }];
+    }
+    // Target is behind: U-shape that routes around without going backward
+    const midY = sy !== ty ? (sy + ty) / 2 : sy - 60;
+    return [
+      { x: sx, y: sy },
+      { x: sx + offset, y: sy },
+      { x: sx + offset, y: midY },
+      { x: tx - offset, y: midY },
+      { x: tx - offset, y: ty },
+      { x: tx, y: ty },
+    ];
+  }
+
+  if (sourcePosition === Position.Left && targetPosition === Position.Right) {
+    if (tx <= sx) {
+      const midX = (sx + tx) / 2;
+      return [{ x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ty }, { x: tx, y: ty }];
+    }
+    const midY = sy !== ty ? (sy + ty) / 2 : sy - 60;
+    return [
+      { x: sx, y: sy },
+      { x: sx - offset, y: sy },
+      { x: sx - offset, y: midY },
+      { x: tx + offset, y: midY },
+      { x: tx + offset, y: ty },
+      { x: tx, y: ty },
+    ];
+  }
+
+  // Top/Bottom or mixed: simple mid-axis path
+  const midX = (sx + tx) / 2;
+  return [{ x: sx, y: sy }, { x: midX, y: sy }, { x: midX, y: ty }, { x: tx, y: ty }];
+}
+
 export function ELKRouteEdge(props: EdgeProps) {
   const {
     id, sourceX, sourceY, targetX, targetY,
@@ -43,7 +90,42 @@ export function ELKRouteEdge(props: EdgeProps) {
   let labelY: number;
 
   if (waypoints.length > 0) {
-    const allPoints: Waypoint[] = [{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }];
+    // Snap the first/last waypoints' transverse axis to source/target handle positions
+    // so the entry and exit segments stay orthogonal after node drags.
+    const snapped = waypoints.map((wp, i) => {
+      if (i === 0) {
+        return (sourcePosition === Position.Left || sourcePosition === Position.Right)
+          ? { x: wp.x, y: sourceY }
+          : { x: sourceX, y: wp.y };
+      }
+      if (i === waypoints.length - 1) {
+        return (targetPosition === Position.Left || targetPosition === Position.Right)
+          ? { x: wp.x, y: targetY }
+          : { x: targetX, y: wp.y };
+      }
+      return wp;
+    });
+
+    // Detect backward segments: the first waypoint is behind the source handle,
+    // or the last waypoint is past the target handle. This happens when a node is
+    // dragged far enough that the static ELK waypoints are no longer on the correct
+    // side — the path would double back unnecessarily.
+    const first = snapped[0];
+    const last = snapped[snapped.length - 1];
+    const isBackward =
+      (sourcePosition === Position.Right  && first.x < sourceX) ||
+      (sourcePosition === Position.Left   && first.x > sourceX) ||
+      (sourcePosition === Position.Bottom && first.y < sourceY) ||
+      (sourcePosition === Position.Top    && first.y > sourceY) ||
+      (targetPosition === Position.Left   && last.x  > targetX) ||
+      (targetPosition === Position.Right  && last.x  < targetX) ||
+      (targetPosition === Position.Top    && last.y  > targetY) ||
+      (targetPosition === Position.Bottom && last.y  < targetY);
+
+    const allPoints = isBackward
+      ? buildOrthogonalFallback(sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition)
+      : [{ x: sourceX, y: sourceY }, ...snapped, { x: targetX, y: targetY }];
+
     edgePath = buildRoutedPath(allPoints);
     const mid = allPoints[Math.floor(allPoints.length / 2)];
     labelX = mid.x;
