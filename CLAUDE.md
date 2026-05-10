@@ -10,11 +10,10 @@ A browser-based Satisfactory factory planner. Players declare their game progres
 
 `public/generated/data/` is gitignored. On a fresh clone you must generate it before the app can run:
 
-1. Copy the game's `Docs.json` (from `<install>/CommunityResources/Docs/Docs.json`) to `satisfactory-assets/en-US.json`.
-2. Run `npm run preprocess` — writes `items.json`, `recipes.json`, `schematics.json`, `buildings.json` to `public/generated/data/`.
-3. `npm run dev` or `npm run build` as normal.
+1. Run `npm run preprocess` — writes `items.json`, `recipes.json`, `schematics.json`, `buildings.json` to `public/generated/data/`.
+2. `npm run dev` or `npm run build` as normal.
 
-`satisfactory-assets/en-US.json` is not committed (too large). The preprocessing script skips silently when the file is absent and all output files are already present.
+`satisfactory-assets/en-US.json` is committed (≈10 MB). The preprocessing script skips silently when all output files are newer than the source.
 
 ## Commands
 
@@ -29,6 +28,30 @@ npx tsc --noEmit     # type-check without building (no separate lint script exis
 `prebuild` runs `preprocess` automatically — skips if outputs are newer than the source. `npm run dev` does NOT auto-preprocess; run it manually when source data changes.
 
 No test runner or linter is configured yet. `tsc --noEmit` is the only static analysis available.
+
+## Deployment
+
+The app is served as a static SPA from an nginx container. `npm run build` (triggered by the Docker multi-stage build) runs `prebuild` → preprocess → tsc + Vite. The resulting `dist/` is copied into `nginx:alpine`. `nginx.conf` sets a SPA fallback (`try_files $uri $uri/ /index.html`), immutable caching for hashed assets, and no-cache for `index.html`.
+
+```bash
+docker build -t satisfactory-factory-planner .
+docker run -p 8080:80 satisfactory-factory-planner
+```
+
+The Helm chart lives in `helm/satisfactory-factory-planner/`. `values.yaml` exposes `image.repository`, `image.tag` (defaults to `Chart.appVersion`), `replicaCount`, `service`, `ingress`, and `resources`. The `sfp.*` helpers in `_helpers.tpl` are used across all templates.
+
+## Releases
+
+Versioning follows [Conventional Commits](https://www.conventionalcommits.org/) + [semantic-release](https://semantic-release.gitbook.io/). Config is in `.releaserc.json`. On every push to `main`:
+
+1. `@semantic-release/commit-analyzer` determines the next version from commit types (`fix:` → patch, `feat:` → minor, `feat!:` → major).
+2. `@semantic-release/npm` bumps `package.json` (`npmPublish: false`).
+3. `@semantic-release/exec` runs `scripts/update-chart-version.mjs <version>` — updates `version` and `appVersion` in `helm/satisfactory-factory-planner/Chart.yaml`.
+4. `@semantic-release/git` commits `package.json`, `CHANGELOG.md`, and `Chart.yaml` back to `main` with message `chore(release): <version> [skip ci]`, then creates the git tag.
+5. `@semantic-release/github` creates the GitHub Release.
+6. The `publish` job (`.github/workflows/release.yml`) builds and pushes the Docker image to `ghcr.io/byteluka/satisfactory-factory-planner` and the Helm chart to `ghcr.io/byteluka/charts` as an OCI artifact.
+
+The Docker image name is hardcoded as `satisfactory-factory-planner` in the workflow (using `${{ github.repository_owner }}` + the literal name) rather than derived from `${{ github.repository }}`, which would produce `satisfactoryfactoryplanner` without dashes after lowercasing.
 
 ## Stack
 
@@ -151,6 +174,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 - `src/components/phase2/ELKRouteEdge.tsx` — custom React Flow edge type that follows ELK-computed waypoints
 - `src/components/phase2/RecipeListPanel.tsx` — recipe toggle panel (expanded by default); grouped by machine; shows in-use indicator
 - `src/components/phase2/ProductionGraph.tsx` — React Flow canvas with ELK auto-layout
+- `src/components/phase2/nodes/` — one file per node type (`ResourceNode`, `ImportNode`, `RecipeNode`, `ProductNode`, `ByproductNode`)
 - `src/pages/Phase2Page.tsx` — outer (loading gate) + inner (hooks + layout); filters disabled recipes before solve
 
 **LP solver design (`solver.worker.ts`):**
