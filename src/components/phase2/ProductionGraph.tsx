@@ -188,6 +188,7 @@ export function ProductionGraph({
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
         nodesConnectable={false}
+        edgesReconnectable={false}
         fitView
         fitViewOptions={{ padding: 0.15 }}
         minZoom={0.1}
