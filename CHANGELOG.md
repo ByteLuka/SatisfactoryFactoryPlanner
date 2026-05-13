@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.3.0...v0.3.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* **ui:** prevent tab key from highlighting dropdown items in phase 2 item search ([b6190b7](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/b6190b7b0d0af1a5ae19f5449569e40105031f4e))
+
 # [0.3.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.2.0...v0.3.0) (2026-05-13)
 
 
