@@ -59,6 +59,7 @@ export function ProductionGraph({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [highlightedEdgeIds, setHighlightedEdgeIds] = useState<Set<string>>(new Set());
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const layoutRunRef = useRef(0);
 
   const handleMachineCountChange = useCallback(
@@ -113,6 +114,7 @@ export function ProductionGraph({
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
       setHighlightedEdgeIds(new Set());
+      setSelectedNodeId(null);
     });
   }, [plan, targets, gameData, isManualMode, layoutVersion, graphOptions, handleMachineCountChange]);
 
@@ -145,6 +147,7 @@ export function ProductionGraph({
   );
 
   const handleEdgeClick = useCallback((_evt: React.MouseEvent, clickedEdge: Edge) => {
+    setSelectedNodeId(null);
     setHighlightedEdgeIds(prev => {
       const isAlreadyOnly = prev.size === 1 && prev.has(clickedEdge.id);
       return isAlreadyOnly ? new Set() : new Set([clickedEdge.id]);
@@ -152,31 +155,63 @@ export function ProductionGraph({
   }, []);
 
   const handleNodeClick = useCallback((_evt: React.MouseEvent, node: Node) => {
-    setHighlightedEdgeIds(() => {
-      const connectedIds = new Set(
-        edges.filter(e => e.source === node.id || e.target === node.id).map(e => e.id),
-      );
-      return connectedIds;
-    });
+    const connectedIds = new Set(
+      edges.filter(e => e.source === node.id || e.target === node.id).map(e => e.id),
+    );
+    setSelectedNodeId(node.id);
+    setHighlightedEdgeIds(connectedIds);
   }, [edges]);
 
   const handlePaneClick = useCallback(() => {
+    setSelectedNodeId(null);
     setHighlightedEdgeIds(new Set());
   }, []);
 
   const hasHighlight = highlightedEdgeIds.size > 0;
 
+  const EDGE_GRAY = '#606072';
+
   const displayEdges = useMemo(() =>
-    edges.map(e => ({
-      ...e,
-      className: highlightedEdgeIds.has(e.id) ? 'edge-highlighted' : undefined,
-      data: { ...(e.data as Record<string, unknown>), highlighted: highlightedEdgeIds.has(e.id) },
-    })),
-    [edges, highlightedEdgeIds],
+    edges.map(e => {
+      const isHighlighted = highlightedEdgeIds.has(e.id);
+      const eData = e.data as Record<string, unknown> & { sourceColor?: string; targetColor?: string };
+      const srcColor = eData.sourceColor ?? EDGE_GRAY;
+      const tgtColor = eData.targetColor ?? EDGE_GRAY;
+
+      let gradientStart = EDGE_GRAY;
+      let gradientEnd = EDGE_GRAY;
+
+      if (isHighlighted) {
+        if (selectedNodeId !== null) {
+          if (e.source === selectedNodeId) {
+            gradientStart = srcColor;
+            gradientEnd = EDGE_GRAY;
+          } else {
+            gradientStart = EDGE_GRAY;
+            gradientEnd = tgtColor;
+          }
+        } else {
+          gradientStart = srcColor;
+          gradientEnd = tgtColor;
+        }
+      }
+
+      return {
+        ...e,
+        className: isHighlighted ? 'edge-highlighted' : undefined,
+        data: {
+          ...eData,
+          highlighted: isHighlighted,
+          gradientStart,
+          gradientEnd,
+        },
+      };
+    }),
+    [edges, highlightedEdgeIds, selectedNodeId],
   );
 
   return (
-    <div className={`w-full h-full relative${hasHighlight ? ' graph-has-highlight' : ''}`}>
+    <div className={`w-full h-full relative bg-[#14141a]${hasHighlight ? ' graph-has-highlight' : ''}`}>
       <ReactFlow
         nodes={nodes}
         edges={displayEdges}
@@ -195,7 +230,7 @@ export function ProductionGraph({
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#3a3a46" gap={20} size={1} />
+        <Background color="#2e2e3e" gap={20} size={1} />
         <Controls
           style={{
             background: '#25252d',

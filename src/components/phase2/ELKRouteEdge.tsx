@@ -83,7 +83,11 @@ export function ELKRouteEdge(props: EdgeProps) {
 
   const waypoints = (data?.waypoints as Waypoint[] | undefined) ?? [];
   const highlighted = (data?.highlighted as boolean | undefined) ?? false;
-  const edgeColor = (style?.stroke as string | undefined) ?? '#3a3a46';
+  const gradientStart = (data?.gradientStart as string | undefined) ?? '#606072';
+  const gradientEnd = (data?.gradientEnd as string | undefined) ?? '#606072';
+  const useGradient = highlighted && gradientStart !== gradientEnd;
+  const gradientId = `edge-grad-${id}`;
+  const highlightStroke = useGradient ? `url(#${gradientId})` : gradientStart;
 
   let edgePath: string;
   let labelX: number;
@@ -139,18 +143,41 @@ export function ELKRouteEdge(props: EdgeProps) {
 
   return (
     <>
-      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      {useGradient && (
+        <defs>
+          <linearGradient
+            id={gradientId}
+            gradientUnits="userSpaceOnUse"
+            x1={sourceX}
+            y1={sourceY}
+            x2={targetX}
+            y2={targetY}
+          >
+            <stop offset="0%" stopColor={gradientStart} />
+            <stop offset="100%" stopColor={gradientEnd} />
+          </linearGradient>
+        </defs>
+      )}
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        style={highlighted
+          ? { ...style, stroke: highlightStroke, strokeOpacity: 0.4 }
+          : style
+        }
+        markerEnd={markerEnd}
+      />
       {highlighted && (
         <path
           d={edgePath}
           fill="none"
-          stroke={edgeColor}
+          stroke={highlightStroke}
           strokeWidth={3}
           strokeDasharray="16 8"
           strokeLinecap="round"
           style={{
             animation: 'edge-flow 0.6s linear infinite',
-            filter: `drop-shadow(0 0 5px ${edgeColor})`,
+            filter: useGradient ? undefined : `drop-shadow(0 0 5px ${gradientStart})`,
             opacity: 0.95,
             pointerEvents: 'none',
           }}

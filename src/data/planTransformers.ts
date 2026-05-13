@@ -205,7 +205,34 @@ function buildByproductNodesFromEdges(
   });
 }
 
-function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
+function getEdgeEndpointColors(
+  fromNodeId: string,
+  toNodeId: string,
+  itemClassName: string,
+  targetItemSet: Set<string>,
+): { sourceColor: string; targetColor: string } {
+  let sourceColor: string;
+  if (fromNodeId.startsWith('resource_')) {
+    sourceColor = '#2dd4bf';
+  } else if (fromNodeId.startsWith('import_')) {
+    sourceColor = '#818cf8';
+  } else {
+    sourceColor = targetItemSet.has(itemClassName) ? '#4ade80' : '#fbbf24';
+  }
+
+  let targetColor: string;
+  if (toNodeId.startsWith('product_')) {
+    targetColor = '#e8820c';
+  } else if (toNodeId.startsWith('byproduct_')) {
+    targetColor = '#fb7185';
+  } else {
+    targetColor = '#60a5fa';
+  }
+
+  return { sourceColor, targetColor };
+}
+
+function buildRFEdges(planEdges: PlanEdge[], gameData: GameData, targetItemSet: Set<string>): Edge[] {
   return planEdges.map(pe => {
     const isFromResource = pe.fromNodeId.startsWith('resource_');
     const isFromImport = pe.fromNodeId.startsWith('import_');
@@ -220,7 +247,9 @@ function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
     const unit = isLiquid ? 'm³/min' : '/min';
     const rateLabel = `${pe.ratePerMin.toFixed(1)}${unit}`;
 
-    const edgeColor = '#3a3a46';
+    const { sourceColor, targetColor } = getEdgeEndpointColors(
+      pe.fromNodeId, pe.toNodeId, pe.itemClassName, targetItemSet,
+    );
 
     return {
       id: pe.id,
@@ -232,8 +261,9 @@ function buildRFEdges(planEdges: PlanEdge[], gameData: GameData): Edge[] {
       label: rateLabel,
       labelStyle: { fontSize: 10, fill: '#8888a0' },
       labelBgStyle: { fill: '#25252d', fillOpacity: 0.85 },
-      style: { stroke: edgeColor, strokeWidth: 2 },
+      style: { stroke: '#606072', strokeWidth: 2 },
       animated: false,
+      data: { sourceColor, targetColor },
     };
   });
 }
@@ -247,6 +277,7 @@ export function transformPlanToGraphData(
   onMachineCountChange: (recipeClassName: string, count: number) => void,
 ): GraphData {
   const targetItemClassNames = targets.map(t => t.itemClassName);
+  const targetItemSet = new Set(targetItemClassNames);
 
   const resourceNodes = buildResourceNodesFromEdges(plan.edges, gameData, plan.resourceUsage);
   const importNodes = buildImportNodesFromEdges(plan.edges, gameData, plan.importUsage ?? {});
@@ -260,7 +291,7 @@ export function transformPlanToGraphData(
   );
   const productNodes = buildProductNodes(targets, plan.edges, gameData);
   const byproductNodes = buildByproductNodesFromEdges(plan.edges, gameData);
-  const rfEdges = buildRFEdges(plan.edges, gameData);
+  const rfEdges = buildRFEdges(plan.edges, gameData, targetItemSet);
 
   return {
     nodes: [...resourceNodes, ...importNodes, ...recipeNodes, ...productNodes, ...byproductNodes],

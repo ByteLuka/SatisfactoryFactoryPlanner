@@ -68,8 +68,8 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
     <div
       style={{ minWidth: 240 }}
       className={[
-        'bg-[#25252d] rounded-lg shadow-lg overflow-visible',
-        selected ? 'border-2 border-[#e8820c]' : 'border border-[#3a3a46]',
+        'bg-[#25252d] rounded-lg shadow-lg overflow-visible border-2',
+        selected ? 'border-[#e8820c]' : 'border-[#3a3a46]',
       ].join(' ')}
     >
       {/* Header */}
@@ -125,7 +125,7 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
                 type="target"
                 position={Position.Left}
                 id={`in_${ir.itemClassName}`}
-                style={{ background: '#1e3a5f', border: `2px solid ${INPUT_COLOR}`, width: 10, height: 10, top: 14, left: -16 }}
+                style={{ background: '#1e3a5f', border: `2px solid ${INPUT_COLOR}`, width: 10, height: 10, top: 14, left: -14 }}
               />
               <div className="flex flex-col">
                 <span className="text-[10px] truncate leading-tight" style={{ color: INPUT_COLOR }}>{ir.itemName}</span>
@@ -149,7 +149,7 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
                   type="source"
                   position={Position.Right}
                   id={`out_${or.itemClassName}`}
-                  style={{ background: isTarget ? '#14532d' : '#451a03', border: `2px solid ${color}`, width: 10, height: 10, top: 14, right: -16 }}
+                  style={{ background: isTarget ? '#14532d' : '#451a03', border: `2px solid ${color}`, width: 10, height: 10, top: 14, right: -14 }}
                 />
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] truncate leading-tight" style={{ color }}>{or.itemName}</span>
