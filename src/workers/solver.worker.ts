@@ -275,14 +275,19 @@ function buildInfeasibilityMessage(
   input: SolverInput,
   rawResources: Set<string>,
   producibleItems: Set<string>,
+  strategy = OptimizationStrategy.BALANCED,
 ): string {
+  // Use the original strategy for the unconstrained solve so unrated MAX_OUTPUT targets
+  // actually drive production — BALANCED would trivially satisfy balance >= 0 with 0 machines.
+  const unconstrainedStrategy =
+    strategy === OptimizationStrategy.MAX_OUTPUT ? OptimizationStrategy.MAX_OUTPUT : OptimizationStrategy.BALANCED;
   const unconstrained = buildAndSolve(
     input.availableRecipes,
     rawResources,
     producibleItems,
     input.targets,
     {},
-    OptimizationStrategy.BALANCED,
+    unconstrainedStrategy,
     input.manualInputs,
     true,
   );
@@ -447,6 +452,21 @@ function solve(input: SolverInput): SolverOutput {
   for (const mi of manualInputs) {
     const rate = (finalResult[`import_${mi.itemClassName}`] as number | undefined) ?? 0;
     if (rate > 0.001) importUsage[mi.itemClassName] = rate;
+  }
+
+  // With MAX_OUTPUT, a zero-production result is effectively infeasible — the LP is technically
+  // feasible (max of 0 satisfies balance >= 0) but produces nothing useful.
+  if (strategy === OptimizationStrategy.MAX_OUTPUT) {
+    const zeroTargets = targets
+      .filter(t => t.ratePerMin === undefined)
+      .filter(t => {
+        const net = planNodes.reduce((sum, node) => sum + (node.outputRates[t.itemClassName] ?? 0) - (node.inputRates[t.itemClassName] ?? 0), 0);
+        return net < 0.001;
+      });
+    if (zeroTargets.length > 0) {
+      const errorMessage = buildInfeasibilityMessage(input, rawResources, producibleItems, strategy);
+      return { status: 'infeasible', errorMessage };
+    }
   }
 
   const edges = computeEdges(planNodes, targets, rawResources, importUsage);

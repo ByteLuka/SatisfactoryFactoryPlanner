@@ -11,6 +11,7 @@ import { RecipeListPanel } from '../components/phase2/RecipeListPanel';
 import type { GameData } from '../types/domain';
 import { OptimizationStrategy } from '../types/plan';
 import type { RecipePowerCoefficient } from '../types/plan';
+import { MAP_RESOURCE_POOL_LIMITS } from '../data/resources';
 
 function Phase2PageInner({ gameData }: { gameData: GameData }) {
   const { planState, dispatch } = usePlanContext();
@@ -60,7 +61,9 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
     solve({
       targets: planState.targets,
       availableRecipes: enabledRecipes,
-      resourcePool: planState.resourcePool,
+      resourcePool: planState.resourcePool.mode === 'map'
+          ? { mode: 'map' as const, limits: MAP_RESOURCE_POOL_LIMITS }
+          : planState.resourcePool,
       strategy: effectiveStrategy,
       manualInputs: planState.manualInputs,
       recipePowerCoefficients,

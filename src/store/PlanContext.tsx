@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
 import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput, GraphOptions } from '../types/plan';
 import { OptimizationStrategy } from '../types/plan';
-import { DEFAULT_RESOURCE_POOL } from '../data/resources';
+import { DEFAULT_RESOURCE_POOL, MAP_RESOURCE_POOL_LIMITS } from '../data/resources';
 
 const STORAGE_KEY = 'sfp_plan_state';
 
@@ -33,6 +33,7 @@ export type PlanAction =
   | { type: 'SET_MANUAL_INPUT_RATE'; id: string; ratePerMin: number }
   | { type: 'SET_RESOURCE_POOL_MODE'; mode: 'map' | 'custom' }
   | { type: 'SET_RESOURCE_LIMIT'; itemClassName: string; limit: number }
+  | { type: 'RESET_RESOURCE_LIMITS' }
   | { type: 'SET_STRATEGY'; strategy: OptimizationStrategy }
   | { type: 'SET_SOLVER_RESULT'; result: SolverOutput }
   | { type: 'SET_SOLVER_MODE'; mode: 'solver' | 'manual' }
@@ -125,6 +126,12 @@ function planReducer(state: PlanState, action: PlanAction): PlanState {
           ...state.resourcePool,
           limits: { ...state.resourcePool.limits, [action.itemClassName]: action.limit },
         },
+      };
+
+    case 'RESET_RESOURCE_LIMITS':
+      return {
+        ...state,
+        resourcePool: { ...state.resourcePool, limits: { ...MAP_RESOURCE_POOL_LIMITS } },
       };
 
     case 'SET_STRATEGY':

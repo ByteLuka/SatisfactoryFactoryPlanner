@@ -355,31 +355,55 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
         </div>
 
         {resourcePool.mode === 'custom' && (
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
-            {Object.entries(MAP_RESOURCE_POOL_LIMITS).map(([className, defaultLimit]) => {
-              const name = RESOURCE_DISPLAY_NAMES[className] ?? className;
-              const value = resourcePool.limits[className] ?? defaultLimit;
-              return (
-                <div key={className} className="flex items-center gap-2">
-                  <span className="text-[#8888a0] text-sm flex-1 truncate">{name}</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={60}
-                    value={value}
-                    onChange={e =>
-                      dispatch({
-                        type: 'SET_RESOURCE_LIMIT',
-                        itemClassName: className,
-                        limit: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-24 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-0.5 text-sm text-[#e8e8f0] focus:outline-none focus:border-[#e8820c]/60 text-right"
-                  />
-                  <span className="text-[#8888a0] text-sm">/min</span>
-                </div>
-              );
-            })}
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-end">
+              <button
+                onClick={() => dispatch({ type: 'RESET_RESOURCE_LIMITS' })}
+                title="Reset all to full-map defaults"
+                className="text-xs text-[#8888a0] hover:text-[#e8e8f0] border border-[#3a3a46] hover:border-[#e8820c]/60 rounded px-2 py-1 transition-colors"
+              >
+                Reset all
+              </button>
+            </div>
+            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-4">
+              {Object.entries(MAP_RESOURCE_POOL_LIMITS).map(([className, defaultLimit]) => {
+                const name = RESOURCE_DISPLAY_NAMES[className] ?? className;
+                const value = resourcePool.limits[className] ?? defaultLimit;
+                const isModified = value !== defaultLimit;
+                return (
+                  <div key={className} className="flex items-center gap-2">
+                    <span className="text-[#8888a0] text-sm flex-1 truncate">{name}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={60}
+                      value={value}
+                      onChange={e =>
+                        dispatch({
+                          type: 'SET_RESOURCE_LIMIT',
+                          itemClassName: className,
+                          limit: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-24 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-0.5 text-sm text-[#e8e8f0] focus:outline-none focus:border-[#e8820c]/60 text-right"
+                    />
+                    <span className="text-[#8888a0] text-sm">/min</span>
+                    <button
+                      onClick={() =>
+                        dispatch({ type: 'SET_RESOURCE_LIMIT', itemClassName: className, limit: defaultLimit })
+                      }
+                      title={`Reset to ${defaultLimit}/min`}
+                      disabled={!isModified}
+                      className="text-[#8888a0] hover:text-[#e8e8f0] disabled:opacity-20 disabled:cursor-default transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                        <path fillRule="evenodd" d="M8 3.5a4.5 4.5 0 1 0 4.243 6H10.5a.75.75 0 0 1 0-1.5h3.75a.75.75 0 0 1 .75.75V12.5a.75.75 0 0 1-1.5 0v-1.86A6 6 0 1 1 8 2a.75.75 0 0 1 0 1.5Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
         {resourcePool.mode === 'map' && (
