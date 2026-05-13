@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.2.0...v0.3.0) (2026-05-13)
+
+
+### Features
+
+* **ui:** add keyboard navigation to phase2 production item selection dropdown ([5d94b87](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/5d94b870b91a33fbf30b12dda7d35ce649d79b03))
+
 # [0.2.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.1.2...v0.2.0) (2026-05-13)
 
 
