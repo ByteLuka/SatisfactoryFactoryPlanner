@@ -1,6 +1,6 @@
 {
   "name": "satisfactory-factory-planner",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Satisfactory Factory Planner - A web application capable of planning and optimizing factory layouts for the game Satisfactory.",
   "main": "dist/index.js",
   "scripts": {

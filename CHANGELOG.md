@@ -1,3 +1,10 @@
+## [0.5.1](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.0...v0.5.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* **phase2:** correct resource pool and solver infeasibility edge cases ([4f3b565](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/4f3b565d5c639bd9e415999794d5c7d46549247f))
+
 # [0.5.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.4.0...v0.5.0) (2026-05-13)
 
 
