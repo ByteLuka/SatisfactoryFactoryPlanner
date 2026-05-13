@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.1.2...v0.2.0) (2026-05-13)
+
+
+### Features
+
+* **ui:** home page, shared AppHeader with GitHub/version indicator, font scale bump ([db0d9aa](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/db0d9aa5e13f54df9862ed9cb24f783cd076dc0c))
+
 ## [0.1.2](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.1.1...v0.1.2) (2026-05-10)
 
 
