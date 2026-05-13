@@ -95,6 +95,9 @@ function ItemSearch({
     } else if (e.key === 'Escape') {
       setOpen(false);
       setActiveIndex(-1);
+    } else if (e.key === 'Tab') {
+      setOpen(false);
+      setActiveIndex(-1);
     }
   }
 
@@ -119,6 +122,7 @@ function ItemSearch({
             <button
               key={item.className}
               ref={idx === activeIndex ? activeItemRef : null}
+              tabIndex={-1}
               onMouseDown={e => {
                 e.preventDefault();
                 selectItem(item.className);
