@@ -1,5 +1,5 @@
 import Solver from 'javascript-lp-solver';
-import type { MainToWorker, WorkerToMain, SolverInput, SolverOutput, PlanNode, PlanEdge, ProductionPlan, ManualInput } from '../types/plan';
+import type { MainToWorker, WorkerToMain, SolverInput, SolverOutput, PlanNode, PlanEdge, ProductionPlan, ManualInput, RecipePowerCoefficient } from '../types/plan';
 import type { Recipe } from '../types/domain';
 import { OptimizationStrategy } from '../types/plan';
 import { FREELY_AVAILABLE_ITEMS } from '../data/resources';
@@ -17,6 +17,7 @@ function buildAndSolve(
   strategy: OptimizationStrategy,
   manualInputs: ManualInput[],
   omitResourceConstraints = false,
+  powerCoefficients: Record<string, RecipePowerCoefficient> = {},
 ): ReturnType<typeof Solver.Solve> {
   const constraints: Record<string, { min?: number; max?: number }> = {};
   const variables: Record<string, Record<string, number>> = {};
@@ -53,9 +54,13 @@ function buildAndSolve(
         objCoeff += prodRate - consRate;
       }
       variable['objective'] = objCoeff;
+    } else if (strategy === OptimizationStrategy.OPT_POWER) {
+      // Use per-machine power as LP weight to minimize power-weighted machine count.
+      // OPT_POWER further refines via greedy elimination using actual underclocked power.
+      variable['objective'] = powerCoefficients[recipe.className]?.basePower ?? 1;
     } else {
-      // BALANCED, MIN_MACHINES, MIN_RECIPES: all use fractional sum as the LP objective.
-      // MIN_MACHINES and MIN_RECIPES improve the result via post-processing in greedyEliminate.
+      // BALANCED, OPT_MACHINES, OPT_RECIPES: all use fractional sum as the LP objective.
+      // OPT_MACHINES and OPT_RECIPES improve the result via post-processing in greedyEliminate.
       variable['objective'] = 1;
     }
 
@@ -96,6 +101,7 @@ function buildAndSolve(
     opType: strategy === OptimizationStrategy.MAX_OUTPUT ? 'max' : 'min',
     constraints,
     variables,
+    // Import variables have objective: 0, so they are never penalised regardless of strategy
   });
 }
 
@@ -114,7 +120,8 @@ function greedyEliminate(
   targets: SolverInput['targets'],
   resourceLimits: Record<string, number>,
   manualInputs: ManualInput[],
-  metric: 'machines' | 'recipes',
+  metric: 'machines' | 'recipes' | 'power',
+  powerCoefficients: Record<string, RecipePowerCoefficient> = {},
 ): ReturnType<typeof Solver.Solve> {
   const recipeValue = (result: ReturnType<typeof Solver.Solve>, r: Recipe): number =>
     (result[`recipe_${r.className}`] as number | undefined) ?? 0;
@@ -124,6 +131,18 @@ function greedyEliminate(
       return recipes
         .filter(r => recipeValue(result, r) > 0.001)
         .reduce((sum, r) => sum + Math.ceil(recipeValue(result, r)), 0);
+    }
+    if (metric === 'power') {
+      return recipes
+        .filter(r => recipeValue(result, r) > 0.001)
+        .reduce((sum, r) => {
+          const x = recipeValue(result, r);
+          const pc = powerCoefficients[r.className];
+          if (!pc) return sum;
+          const full = Math.floor(x);
+          const frac = x - full;
+          return sum + full * pc.basePower + (frac > 0.001 ? pc.basePower * Math.pow(frac, pc.exponent) : 0);
+        }, 0);
     }
     return recipes.filter(r => recipeValue(result, r) > 0.001).length;
   };
@@ -304,7 +323,7 @@ function buildInfeasibilityMessage(
 }
 
 function solve(input: SolverInput): SolverOutput {
-  const { targets, availableRecipes, resourcePool, strategy, manualInputs } = input;
+  const { targets, availableRecipes, resourcePool, strategy, manualInputs, recipePowerCoefficients = {} } = input;
 
   if (targets.length === 0) {
     return { status: 'error', errorMessage: 'No production targets specified.' };
@@ -353,6 +372,8 @@ function solve(input: SolverInput): SolverOutput {
     resourceLimits,
     strategy,
     manualInputs,
+    false,
+    recipePowerCoefficients,
   );
 
   if (!result.feasible) {
@@ -360,8 +381,8 @@ function solve(input: SolverInput): SolverOutput {
     return { status: 'infeasible', errorMessage };
   }
 
-  // MIN_MACHINES and MIN_RECIPES improve the LP solution by greedily eliminating recipes
-  // whose removal reduces the target metric (ceiled machine count or active recipe count).
+  // OPT_MACHINES, OPT_RECIPES, and OPT_POWER improve the LP solution by greedily eliminating
+  // recipes whose removal reduces the target metric.
   let finalResult = result;
   if (strategy === OptimizationStrategy.OPT_MACHINES || strategy === OptimizationStrategy.OPT_RECIPES) {
     finalResult = greedyEliminate(
@@ -373,6 +394,18 @@ function solve(input: SolverInput): SolverOutput {
       resourceLimits,
       manualInputs,
       strategy === OptimizationStrategy.OPT_MACHINES ? 'machines' : 'recipes',
+    );
+  } else if (strategy === OptimizationStrategy.OPT_POWER) {
+    finalResult = greedyEliminate(
+      result,
+      availableRecipes,
+      rawResources,
+      producibleItems,
+      targets,
+      resourceLimits,
+      manualInputs,
+      'power',
+      recipePowerCoefficients,
     );
   }
 

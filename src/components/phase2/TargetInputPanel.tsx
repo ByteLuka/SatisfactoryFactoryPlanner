@@ -17,6 +17,7 @@ const OPTIMIZATION_LABELS: Partial<Record<OptimizationStrategy, string>> = {
   [OptimizationStrategy.BALANCED]: 'Balanced',
   [OptimizationStrategy.OPT_MACHINES]: 'Optimize machines',
   [OptimizationStrategy.OPT_RECIPES]: 'Optimize recipe diversity',
+  [OptimizationStrategy.OPT_POWER]: 'Minimize power (with underclocking)',
 };
 
 function ItemSearch({
@@ -170,6 +171,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
     OptimizationStrategy.BALANCED,
     OptimizationStrategy.OPT_MACHINES,
     OptimizationStrategy.OPT_RECIPES,
+    OptimizationStrategy.OPT_POWER,
   ] as const;
 
   return (

@@ -93,7 +93,7 @@ Two React Context + `useReducer` stores:
 - `manualInputs` — items imported from external factories, each with a fixed supply rate
 - `disabledRecipes` — classNames of recipes the user has toggled off; all recipes are enabled by default
 - `resourcePool` — map-based or custom raw resource limits
-- `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | BALANCED | OPT_MACHINES | OPT_RECIPES`
+- `strategy` — `OptimizationStrategy` enum: `MAX_OUTPUT | BALANCED | OPT_MACHINES | OPT_RECIPES | OPT_POWER`
 - `graphOptions: GraphOptions` — `{ showResourceNodes, showByproductNodes }` display toggles; when a type is hidden, its nodes and all incident edges are filtered out before layout
 - `solverResult`, `manualMachineCounts`, `nodePositions`, `solverMode`, `layoutVersion`
 
@@ -185,6 +185,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
   - `MAX_OUTPUT` — maximizes net production of unrated targets; auto-selected when any target has no rate
   - `BALANCED` — minimizes `sum(fractional machine count)`; fast LP, good general-purpose default
   - `OPT_MACHINES` / `OPT_RECIPES` — start with a `BALANCED` LP solve, then run `greedyEliminate()` which iteratively removes the lowest-usage active recipes (smallest fractional count first) and re-solves, accepting each removal only if the target metric strictly improves: ceiled machine count for `OPT_MACHINES`, active recipe count for `OPT_RECIPES`. Because the allowed-recipe set updates in-place after each accepted removal, later trials benefit from earlier ones — a single pass chains improvements. This is a heuristic (not globally optimal) but avoids MIP, which is too slow for the JS solver.
+  - `OPT_POWER` — LP objective uses per-recipe `basePower` as the weight (minimizing power-weighted fractional machine count), then `greedyEliminate()` refines using actual underclocked power as the metric: `floor(x) × basePower + frac^exponent × basePower` per recipe. `Phase2Page` pre-computes `recipePowerCoefficients: Record<string, { basePower, exponent }>` from `gameData.buildings` and passes it via `SolverInput` (variable-power recipes use `(minPower + maxPower) / 2` as `basePower`).
 - Infeasibility: re-runs without resource constraints to identify bottleneck resources vs. unproducible items
 
 **Graph node types and color semantics:**

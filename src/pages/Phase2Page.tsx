@@ -10,6 +10,7 @@ import { ProductionGraph } from '../components/phase2/ProductionGraph';
 import { RecipeListPanel } from '../components/phase2/RecipeListPanel';
 import type { GameData } from '../types/domain';
 import { OptimizationStrategy } from '../types/plan';
+import type { RecipePowerCoefficient } from '../types/plan';
 
 function Phase2PageInner({ gameData }: { gameData: GameData }) {
   const { planState, dispatch } = usePlanContext();
@@ -38,6 +39,23 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
     ? OptimizationStrategy.MAX_OUTPUT
     : planState.strategy;
 
+  const recipePowerCoefficients = useMemo<Record<string, RecipePowerCoefficient>>(() => {
+    const coeffs: Record<string, RecipePowerCoefficient> = {};
+    for (const recipe of enabledRecipes) {
+      const buildingClassName = recipe.producedInClassNames.find(cn => gameData.buildings[cn]);
+      const building = buildingClassName ? gameData.buildings[buildingClassName] : undefined;
+      if (!building || !Number.isFinite(building.powerConsumption)) continue;
+      const basePower = recipe.isVariablePower
+        ? (recipe.minPower + recipe.maxPower) / 2
+        : building.powerConsumption;
+      coeffs[recipe.className] = {
+        basePower,
+        exponent: building.powerConsumptionExponent,
+      };
+    }
+    return coeffs;
+  }, [enabledRecipes, gameData.buildings]);
+
   function handleCompute() {
     solve({
       targets: planState.targets,
@@ -45,6 +63,7 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
       resourcePool: planState.resourcePool,
       strategy: effectiveStrategy,
       manualInputs: planState.manualInputs,
+      recipePowerCoefficients,
     });
   }
 

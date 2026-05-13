@@ -5,6 +5,7 @@ export enum OptimizationStrategy {
   BALANCED = 'BALANCED',
   OPT_MACHINES = 'OPT_MACHINES',
   OPT_RECIPES = 'OPT_RECIPES',
+  OPT_POWER = 'OPT_POWER',
 }
 
 export interface ProductionTarget {
@@ -24,12 +25,18 @@ export interface ResourcePool {
   limits: Record<string, number>;
 }
 
+export interface RecipePowerCoefficient {
+  basePower: number;
+  exponent: number;
+}
+
 export interface SolverInput {
   targets: ProductionTarget[];
   availableRecipes: Recipe[];
   resourcePool: ResourcePool;
   strategy: OptimizationStrategy;
   manualInputs: ManualInput[];
+  recipePowerCoefficients?: Record<string, RecipePowerCoefficient>;
 }
 
 export interface SolverOutput {
