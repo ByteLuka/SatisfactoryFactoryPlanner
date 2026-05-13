@@ -64,7 +64,7 @@ export function HardDriveSelector({ gameData }: Props) {
   return (
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-[#e8e8f0] text-lg font-semibold">Alternate Recipes</h2>
+        <h2 className="text-[#e8e8f0] text-xl font-semibold">Alternate Recipes</h2>
         <CircularProgress
           value={eligibleUnlockedCount}
           total={eligibleCount}
@@ -79,7 +79,7 @@ export function HardDriveSelector({ gameData }: Props) {
           }}
         />
       </div>
-      <p className="text-[#8888a0] text-sm mb-4">
+      <p className="text-[#8888a0] text-base mb-4">
         Check each alternate recipe you have unlocked via Hard Drives in the AWESOME Shop.
       </p>
 
@@ -88,12 +88,12 @@ export function HardDriveSelector({ gameData }: Props) {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search alternates…"
-        className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-sm text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60 mb-3"
+        className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-base text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60 mb-3"
       />
 
       <div className="border border-[#3a3a46] rounded-md overflow-hidden max-h-96 overflow-y-auto">
         {displayList.length === 0 ? (
-          <p className="text-[#8888a0] text-sm px-4 py-6 text-center">No alternates match your search.</p>
+          <p className="text-[#8888a0] text-base px-4 py-6 text-center">No alternates match your search.</p>
         ) : (
           <div className="divide-y divide-[#3a3a46]">
             {displayList.map(({ alt, eligible }) => {
@@ -125,7 +125,7 @@ export function HardDriveSelector({ gameData }: Props) {
                     onChange={() => dispatch({ type: 'TOGGLE_ALTERNATE', className: alt.className })}
                     className="w-4 h-4 rounded border-[#3a3a46] bg-[#25252d] accent-[#e8820c] flex-shrink-0 disabled:cursor-not-allowed"
                   />
-                  <span className={`flex-1 text-sm ${unlocked && eligible ? 'text-[#e8e8f0]' : 'text-[#8888a0]'}`}>
+                  <span className={`flex-1 text-base ${unlocked && eligible ? 'text-[#e8e8f0]' : 'text-[#8888a0]'}`}>
                     {alt.name}
                   </span>
                   {!eligible && (

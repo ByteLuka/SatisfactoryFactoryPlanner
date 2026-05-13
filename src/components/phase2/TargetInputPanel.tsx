@@ -63,7 +63,7 @@ function ItemSearch({
         }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
-        className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-sm text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
+        className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-base text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
       />
       {open && filtered.length > 0 && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#25252d] border border-[#3a3a46] rounded-md shadow-xl max-h-60 overflow-y-auto">
@@ -76,20 +76,20 @@ function ItemSearch({
                 setQuery('');
                 setOpen(false);
               }}
-              className="w-full text-left px-3 py-2 text-sm text-[#e8e8f0] hover:bg-[#2e2e38] transition-colors"
+              className="w-full text-left px-3 py-2 text-base text-[#e8e8f0] hover:bg-[#2e2e38] transition-colors"
             >
               {item.name}
             </button>
           ))}
           {filtered.length > 30 && (
-            <div className="px-3 py-2 text-xs text-[#8888a0]">
+            <div className="px-3 py-2 text-sm text-[#8888a0]">
               {filtered.length - 30} more — type to refine
             </div>
           )}
         </div>
       )}
       {open && query.trim() !== '' && filtered.length === 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#25252d] border border-[#3a3a46] rounded-md shadow-xl px-3 py-2 text-sm text-[#8888a0]">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#25252d] border border-[#3a3a46] rounded-md shadow-xl px-3 py-2 text-base text-[#8888a0]">
           No items found
         </div>
       )}
@@ -121,10 +121,10 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
     <div className="flex flex-col gap-4">
       {/* Production targets */}
       <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Production Targets</h3>
+        <h3 className="text-[#e8e8f0] font-semibold text-base mb-3">Production Targets</h3>
 
         {targets.length === 0 ? (
-          <p className="text-[#8888a0] text-xs mb-3">Add items you want to produce.</p>
+          <p className="text-[#8888a0] text-sm mb-3">Add items you want to produce.</p>
         ) : (
           <div className="flex flex-col gap-2 mb-3">
             {targets.map(target => {
@@ -134,7 +134,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                   key={target.id}
                   className="flex items-center gap-2 bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2"
                 >
-                  <span className="flex-1 text-sm text-[#e8e8f0] truncate">
+                  <span className="flex-1 text-base text-[#e8e8f0] truncate">
                     {item?.name ?? target.itemClassName}
                   </span>
                   <input
@@ -151,12 +151,12 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                       });
                     }}
                     placeholder="max"
-                    className="w-20 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-1 text-xs text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60 text-right"
+                    className="w-20 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-1 text-sm text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60 text-right"
                   />
-                  <span className="text-[#8888a0] text-xs">/min</span>
+                  <span className="text-[#8888a0] text-sm">/min</span>
                   <button
                     onClick={() => dispatch({ type: 'REMOVE_TARGET', id: target.id })}
-                    className="text-[#8888a0] hover:text-[#f87171] transition-colors text-xs ml-1"
+                    className="text-[#8888a0] hover:text-[#f87171] transition-colors text-sm ml-1"
                     title="Remove target"
                   >
                     ✕
@@ -168,7 +168,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
         )}
 
         {producibleItems.length === 0 ? (
-          <p className="text-[#8888a0] text-xs italic">
+          <p className="text-[#8888a0] text-sm italic">
             No producible items — unlock milestones or MAM research in Phase 1.
           </p>
         ) : (
@@ -183,8 +183,8 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
 
       {/* Imported inputs */}
       <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-1">Imported Inputs</h3>
-        <p className="text-[#8888a0] text-xs mb-3">
+        <h3 className="text-[#e8e8f0] font-semibold text-base mb-1">Imported Inputs</h3>
+        <p className="text-[#8888a0] text-sm mb-3">
           Items produced by an external factory. The solver will use them as additional supply.
         </p>
 
@@ -197,7 +197,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                   key={mi.id}
                   className="flex items-center gap-2 bg-[#1e1b4b] border border-[#4f46e5]/50 rounded-md px-3 py-2"
                 >
-                  <span className="flex-1 text-sm text-[#e8e8f0] truncate">
+                  <span className="flex-1 text-base text-[#e8e8f0] truncate">
                     {item?.name ?? mi.itemClassName}
                   </span>
                   <input
@@ -213,12 +213,12 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                         ratePerMin: isNaN(val) ? 0 : val,
                       });
                     }}
-                    className="w-20 bg-[#1a1a1f] border border-[#4f46e5]/40 rounded px-2 py-1 text-xs text-[#e8e8f0] focus:outline-none focus:border-[#4f46e5] text-right"
+                    className="w-20 bg-[#1a1a1f] border border-[#4f46e5]/40 rounded px-2 py-1 text-sm text-[#e8e8f0] focus:outline-none focus:border-[#4f46e5] text-right"
                   />
-                  <span className="text-[#8888a0] text-xs">/min</span>
+                  <span className="text-[#8888a0] text-sm">/min</span>
                   <button
                     onClick={() => dispatch({ type: 'REMOVE_MANUAL_INPUT', id: mi.id })}
-                    className="text-[#8888a0] hover:text-[#f87171] transition-colors text-xs ml-1"
+                    className="text-[#8888a0] hover:text-[#f87171] transition-colors text-sm ml-1"
                     title="Remove input"
                   >
                     ✕
@@ -242,10 +242,10 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
       {/* Optimization */}
       {targets.length > 0 && (
         <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-          <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Optimization</h3>
+          <h3 className="text-[#e8e8f0] font-semibold text-base mb-3">Optimization</h3>
 
           {anyUnratedTarget ? (
-            <div className="text-xs text-[#e8820c] bg-[#e8820c]/10 border border-[#e8820c]/30 rounded-md px-3 py-2">
+            <div className="text-sm text-[#e8820c] bg-[#e8820c]/10 border border-[#e8820c]/30 rounded-md px-3 py-2">
               Maximizing output — leave rate blank on any target to maximize it. Set a rate on all
               targets to choose a different optimization.
             </div>
@@ -261,7 +261,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                   >
                     {strategy === s && <span className="w-2 h-2 rounded-full bg-[#e8820c]" />}
                   </span>
-                  <span className="text-sm text-[#e8e8f0]">
+                  <span className="text-base text-[#e8e8f0]">
                     <input
                       type="radio"
                       className="sr-only"
@@ -279,14 +279,14 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
 
       {/* Resource pool */}
       <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Resource Pool</h3>
+        <h3 className="text-[#e8e8f0] font-semibold text-base mb-3">Resource Pool</h3>
         <div className="flex gap-2 mb-3">
           {(['map', 'custom'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => dispatch({ type: 'SET_RESOURCE_POOL_MODE', mode })}
               className={[
-                'flex-1 text-xs py-1.5 rounded border transition-colors',
+                'flex-1 text-sm py-1.5 rounded border transition-colors',
                 resourcePool.mode === mode
                   ? 'bg-[#e8820c]/15 border-[#e8820c] text-[#e8e8f0]'
                   : 'bg-[#2e2e38] border-[#3a3a46] text-[#8888a0] hover:border-[#e8820c]/50',
@@ -304,7 +304,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
               const value = resourcePool.limits[className] ?? defaultLimit;
               return (
                 <div key={className} className="flex items-center gap-2">
-                  <span className="text-[#8888a0] text-xs flex-1 truncate">{name}</span>
+                  <span className="text-[#8888a0] text-sm flex-1 truncate">{name}</span>
                   <input
                     type="number"
                     min={0}
@@ -317,16 +317,16 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
                         limit: parseFloat(e.target.value) || 0,
                       })
                     }
-                    className="w-24 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-0.5 text-xs text-[#e8e8f0] focus:outline-none focus:border-[#e8820c]/60 text-right"
+                    className="w-24 bg-[#1a1a1f] border border-[#3a3a46] rounded px-2 py-0.5 text-sm text-[#e8e8f0] focus:outline-none focus:border-[#e8820c]/60 text-right"
                   />
-                  <span className="text-[#8888a0] text-xs">/min</span>
+                  <span className="text-[#8888a0] text-sm">/min</span>
                 </div>
               );
             })}
           </div>
         )}
         {resourcePool.mode === 'map' && (
-          <p className="text-[#8888a0] text-xs">
+          <p className="text-[#8888a0] text-sm">
             Using full-map resource totals for all raw materials.
           </p>
         )}
@@ -334,7 +334,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
 
       {/* Graph display options */}
       <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-4">
-        <h3 className="text-[#e8e8f0] font-semibold text-sm mb-3">Graph Display</h3>
+        <h3 className="text-[#e8e8f0] font-semibold text-base mb-3">Graph Display</h3>
         <div className="flex flex-col gap-2">
           {(
             [
@@ -346,8 +346,8 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
             return (
               <div key={key} className="flex items-center justify-between gap-3">
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm text-[#e8e8f0]">{label}</span>
-                  <span className="text-[10px] text-[#8888a0] mt-0.5">{description}</span>
+                  <span className="text-base text-[#e8e8f0]">{label}</span>
+                  <span className="text-xs text-[#8888a0] mt-0.5">{description}</span>
                 </div>
                 <button
                   onClick={() => dispatch({ type: 'SET_GRAPH_OPTION', key, value: !checked })}
@@ -375,10 +375,10 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
         {/* Solver / Manual toggle */}
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
-            <span className="text-[#e8e8f0] text-xs font-semibold">
+            <span className="text-[#e8e8f0] text-sm font-semibold">
               {solverMode === 'solver' ? 'Solver mode' : 'Manual mode'}
             </span>
-            <span className="text-[#8888a0] text-[10px] mt-0.5">
+            <span className="text-[#8888a0] text-xs mt-0.5">
               {solverMode === 'solver'
                 ? 'LP solver computes optimal machine counts'
                 : 'Manually adjust machine counts in the graph'}
@@ -411,7 +411,7 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
           onClick={onCompute}
           disabled={isSolving || targets.length === 0}
           className={[
-            'w-full py-2.5 rounded-md font-semibold text-sm transition-colors flex items-center justify-center gap-2',
+            'w-full py-2.5 rounded-md font-semibold text-base transition-colors flex items-center justify-center gap-2',
             targets.length === 0
               ? 'bg-[#2e2e38] text-[#8888a0] cursor-not-allowed'
               : isSolving

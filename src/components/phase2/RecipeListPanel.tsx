@@ -83,12 +83,12 @@ export function RecipeListPanel({
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#2e2e38] transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[#e8e8f0] font-semibold text-sm">Recipes</span>
-          <span className="text-[10px] bg-[#2e2e38] text-[#8888a0] rounded px-1.5 py-0.5 font-mono">
+          <span className="text-[#e8e8f0] font-semibold text-base">Recipes</span>
+          <span className="text-xs bg-[#2e2e38] text-[#8888a0] rounded px-1.5 py-0.5 font-mono">
             {enabledCount}/{availableRecipes.length}
           </span>
         </div>
-        <span className="text-[#8888a0] text-xs">{collapsed ? '▶' : '▼'}</span>
+        <span className="text-[#8888a0] text-sm">{collapsed ? '▶' : '▼'}</span>
       </button>
 
       {!collapsed && (
@@ -100,14 +100,14 @@ export function RecipeListPanel({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Filter recipes…"
-              className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-1.5 text-sm text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
+              className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-1.5 text-base text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
             />
             <div className="flex gap-2">
               <button
                 onClick={() =>
                   dispatch({ type: 'SET_ALL_RECIPES', classNames: allClassNames, enabled: true })
                 }
-                className="flex-1 text-[10px] py-1 rounded border border-[#3a3a46] bg-[#2e2e38] text-[#8888a0] hover:text-[#e8e8f0] hover:border-[#e8820c]/40 transition-colors"
+                className="flex-1 text-xs py-1 rounded border border-[#3a3a46] bg-[#2e2e38] text-[#8888a0] hover:text-[#e8e8f0] hover:border-[#e8820c]/40 transition-colors"
               >
                 Enable all
               </button>
@@ -115,7 +115,7 @@ export function RecipeListPanel({
                 onClick={() =>
                   dispatch({ type: 'SET_ALL_RECIPES', classNames: allClassNames, enabled: false })
                 }
-                className="flex-1 text-[10px] py-1 rounded border border-[#3a3a46] bg-[#2e2e38] text-[#8888a0] hover:text-[#e8e8f0] hover:border-[#f87171]/40 transition-colors"
+                className="flex-1 text-xs py-1 rounded border border-[#3a3a46] bg-[#2e2e38] text-[#8888a0] hover:text-[#e8e8f0] hover:border-[#f87171]/40 transition-colors"
               >
                 Disable all
               </button>
@@ -138,11 +138,11 @@ export function RecipeListPanel({
                       onClick={() => toggleGroup(group.machineName)}
                       className="flex-1 flex items-center gap-1.5 text-left"
                     >
-                      <span className="text-[#8888a0] text-[9px]">{isGroupCollapsed ? '▶' : '▼'}</span>
-                      <span className="text-[#8888a0] text-[10px] font-semibold uppercase tracking-wider">
+                      <span className="text-[#8888a0] text-[10px]">{isGroupCollapsed ? '▶' : '▼'}</span>
+                      <span className="text-[#8888a0] text-xs font-semibold uppercase tracking-wider">
                         {group.machineName}
                       </span>
-                      <span className="text-[10px] text-[#8888a0]/60 font-mono">
+                      <span className="text-xs text-[#8888a0]/60 font-mono">
                         ({groupClassNames.filter(cn => !disabledSet.has(cn)).length}/{group.recipes.length})
                       </span>
                     </button>
@@ -155,7 +155,7 @@ export function RecipeListPanel({
                           enabled: !allEnabled,
                         })
                       }
-                      className="text-[10px] text-[#8888a0] hover:text-[#e8e8f0] transition-colors px-1"
+                      className="text-xs text-[#8888a0] hover:text-[#e8e8f0] transition-colors px-1"
                       title={allEnabled ? 'Disable all in group' : 'Enable all in group'}
                     >
                       {allEnabled ? '✓ all' : allDisabled ? '✕ all' : '~all'}
@@ -194,26 +194,26 @@ export function RecipeListPanel({
                               title={isEnabled ? 'Disable recipe' : 'Enable recipe'}
                             >
                               {isEnabled && (
-                                <span className="text-white text-[8px] font-bold leading-none">✓</span>
+                                <span className="text-white text-[9px] font-bold leading-none">✓</span>
                               )}
                             </button>
 
                             {/* Recipe name */}
                             <span
                               className={[
-                                'flex-1 text-[11px] truncate',
+                                'flex-1 text-xs truncate',
                                 isEnabled ? 'text-[#e8e8f0]' : 'text-[#8888a0]',
                               ].join(' ')}
                             >
                               {recipe.alternate && (
-                                <span className="text-[#e8820c] font-bold mr-1">Alt:</span>
+                                <span className="text-[#e8820c] font-bold mr-1 text-[10px]">Alt:</span>
                               )}
                               {recipe.name.replace(/^Alternate: /, '')}
                             </span>
 
                             {/* In-use badge */}
                             {isActive && (
-                              <span className="text-[9px] font-semibold text-[#4ade80] flex-shrink-0">
+                              <span className="text-[10px] font-semibold text-[#4ade80] flex-shrink-0">
                                 ●
                               </span>
                             )}
@@ -227,7 +227,7 @@ export function RecipeListPanel({
             })}
 
             {filteredGroups.length === 0 && (
-              <p className="text-[#8888a0] text-xs italic text-center py-4">No recipes match filter.</p>
+              <p className="text-[#8888a0] text-sm italic text-center py-4">No recipes match filter.</p>
             )}
           </div>
         </div>

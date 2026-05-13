@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameData } from '../../hooks/useGameData';
 import { useGameState } from '../../hooks/useGameState';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { AppHeader } from '../AppHeader';
 import { PhaseProgressPanel } from './PhaseProgressPanel';
 import { MamResearchTree } from './MamResearchTree';
 import { HardDriveSelector } from './HardDriveSelector';
@@ -19,39 +20,21 @@ function Phase1PageInner({ gameData }: { gameData: GameData }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1f] text-[#e8e8f0]">
-      {/* Header */}
-      <header className="border-b border-[#3a3a46] bg-[#1a1a1f] sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-[#e8820c] font-bold text-lg tracking-wide">
-              Satisfactory Factory Planner
-            </h1>
-            <p className="text-[#8888a0] text-xs mt-0.5">Step 1 of 3 — Game State</p>
-          </div>
-          <div className="flex gap-1">
-            {[1, 2, 3].map(step => (
-              <div
-                key={step}
-                className={`w-2 h-2 rounded-full ${step === 1 ? 'bg-[#e8820c]' : 'bg-[#3a3a46]'}`}
-              />
-            ))}
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#1a1a1f] text-[#e8e8f0] flex flex-col">
+      <AppHeader step={1} subtitle="Step 1 of 3 — Game State" backTo="/" backLabel="Home" />
 
       {/* Content */}
-      <main className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
+      <main className="max-w-5xl mx-auto w-full px-6 py-8 flex flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-[#e8e8f0] text-2xl font-bold mb-1">What's your game progress?</h2>
-            <p className="text-[#8888a0] text-sm">
+            <h2 className="text-[#e8e8f0] text-3xl font-bold mb-1">What's your game progress?</h2>
+            <p className="text-[#8888a0] text-base">
               Tell us where you are in the game so the planner can show only what's available to you.
             </p>
           </div>
           <button
             onClick={handleUnlockAll}
-            className="flex-shrink-0 bg-[#2e2e38] hover:bg-[#3a3a46] border border-[#3a3a46] hover:border-[#e8820c]/50 text-[#8888a0] hover:text-[#e8e8f0] text-xs font-medium px-3 py-2 rounded-md transition-colors whitespace-nowrap"
+            className="flex-shrink-0 bg-[#2e2e38] hover:bg-[#3a3a46] border border-[#3a3a46] hover:border-[#e8820c]/50 text-[#8888a0] hover:text-[#e8e8f0] text-sm font-medium px-3 py-2 rounded-md transition-colors whitespace-nowrap"
             title="Set Phase 5 and check all milestones, MAM research, and alternate recipes"
           >
             Unlock everything

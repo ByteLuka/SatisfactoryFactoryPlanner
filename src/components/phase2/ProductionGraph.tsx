@@ -214,7 +214,7 @@ export function ProductionGraph({
       {/* Reset layout button */}
       <button
         onClick={() => dispatch({ type: 'RESET_LAYOUT' })}
-        className="absolute top-3 right-3 z-10 bg-[#25252d] border border-[#3a3a46] hover:border-[#e8820c]/50 text-[#8888a0] hover:text-[#e8e8f0] text-xs px-3 py-1.5 rounded-md transition-colors shadow"
+        className="absolute top-3 right-3 z-10 bg-[#25252d] border border-[#3a3a46] hover:border-[#e8820c]/50 text-[#8888a0] hover:text-[#e8e8f0] text-sm px-3 py-1.5 rounded-md transition-colors shadow"
       >
         Reset layout
       </button>

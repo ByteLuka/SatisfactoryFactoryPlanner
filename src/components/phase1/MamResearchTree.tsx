@@ -28,7 +28,7 @@ function TreeSection({ tree }: { tree: MamTree }) {
     <div className="border border-[#3a3a46] rounded-md overflow-hidden">
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full bg-[#2e2e38] px-4 py-2 flex items-center gap-3 hover:bg-[#33333f] transition-colors"
+        className="w-full bg-[#2e2e38] px-4 py-2 flex items-center gap-3 hover:bg-[#3a3a46]/50 transition-colors"
       >
         <svg
           width="16"
@@ -45,7 +45,7 @@ function TreeSection({ tree }: { tree: MamTree }) {
             strokeLinejoin="round"
           />
         </svg>
-        <span className="flex-1 text-left text-[#e8e8f0] text-sm font-semibold">{tree.name}</span>
+        <span className="flex-1 text-left text-[#e8e8f0] text-base font-semibold">{tree.name}</span>
         <CircularProgress
           value={checkedCount}
           total={tree.nodes.length}
@@ -70,7 +70,7 @@ function TreeSection({ tree }: { tree: MamTree }) {
                   }
                   className="w-4 h-4 rounded border-[#3a3a46] bg-[#25252d] accent-[#e8820c] cursor-pointer"
                 />
-                <span className={`text-sm ${researched ? 'text-[#e8e8f0]' : 'text-[#8888a0]'}`}>
+                <span className={`text-base ${researched ? 'text-[#e8e8f0]' : 'text-[#8888a0]'}`}>
                   {node.name}
                 </span>
               </label>
@@ -92,7 +92,7 @@ export function MamResearchTree({ gameData }: Props) {
   return (
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-[#e8e8f0] text-lg font-semibold">MAM Research</h2>
+        <h2 className="text-[#e8e8f0] text-xl font-semibold">MAM Research</h2>
         <CircularProgress
           value={researchedCount}
           total={totalNodes}
@@ -107,7 +107,7 @@ export function MamResearchTree({ gameData }: Props) {
           }}
         />
       </div>
-      <p className="text-[#8888a0] text-sm mb-4">
+      <p className="text-[#8888a0] text-base mb-4">
         Check each research node you have completed in the Molecular Analysis Machine.
         Click a tree name to expand it.
       </p>

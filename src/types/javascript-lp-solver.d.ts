@@ -1,3 +1,5 @@
+declare const __APP_VERSION__: string;
+
 declare module 'javascript-lp-solver' {
   interface LPConstraint {
     min?: number;

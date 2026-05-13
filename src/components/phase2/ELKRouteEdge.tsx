@@ -163,7 +163,7 @@ export function ELKRouteEdge(props: EdgeProps) {
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              fontSize: 10,
+              fontSize: 11,
               color: '#8888a0',
               background: 'rgba(37, 37, 45, 0.9)',
               padding: '1px 4px',

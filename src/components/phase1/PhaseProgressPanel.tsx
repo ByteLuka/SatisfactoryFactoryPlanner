@@ -142,7 +142,7 @@ function TierSection({
     <div className="border border-[#3a3a46] rounded-md overflow-hidden">
       <div className="bg-[#2e2e38] px-4 py-2 flex items-center gap-3">
         <span
-          className={`flex-1 text-sm font-semibold ${disabled ? 'text-[#555560]' : 'text-[#e8e8f0]'}`}
+          className={`flex-1 text-base font-semibold ${disabled ? 'text-[#8888a0]' : 'text-[#e8e8f0]'}`}
         >
           Tier {tier}
         </span>
@@ -183,8 +183,8 @@ function TierSection({
                 className="w-4 h-4 rounded border-[#3a3a46] bg-[#25252d] accent-[#e8820c] cursor-pointer"
               />
               <span
-                className={`flex-1 text-sm ${
-                  disabled ? 'text-[#555560]' : checked ? 'text-[#e8e8f0]' : 'text-[#8888a0]'
+                className={`flex-1 text-base ${
+                  disabled ? 'text-[#8888a0]' : checked ? 'text-[#e8e8f0]' : 'text-[#8888a0]'
                 }`}
               >
                 {milestone.name}
@@ -298,7 +298,7 @@ function PhaseRow({
         {/* Phase label */}
         <span
           className={[
-            'flex-1 text-sm font-medium',
+            'flex-1 text-base font-medium',
             isActive ? 'text-[#e8e8f0]' : 'text-[#8888a0]',
           ].join(' ')}
         >
@@ -399,10 +399,10 @@ export function PhaseProgressPanel({ gameData }: { gameData: GameData }) {
   return (
     <section className="bg-[#25252d] border border-[#3a3a46] rounded-lg p-6">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-[#e8e8f0] text-lg font-semibold">Space Elevator & HUB Milestones</h2>
+        <h2 className="text-[#e8e8f0] text-xl font-semibold">Space Elevator & HUB Milestones</h2>
         <CircularProgress value={unlockedCount} total={totalMilestones} onClick={handleToggleAll} />
       </div>
-      <p className="text-[#8888a0] text-sm mb-4">
+      <p className="text-[#8888a0] text-base mb-4">
         Click a phase to set it as active and expand its tiers. Click the milestone bar to toggle
         all. A lock icon means the milestone's materials aren't yet producible.
       </p>
