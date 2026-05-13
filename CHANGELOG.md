@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.3.1...v0.4.0) (2026-05-13)
+
+
+### Features
+
+* **phase2:** add minimize power optimization strategy with underclocking ([6f10b33](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/6f10b33c291225a342d1aa85c49b8ed4d32cd332))
+
 ## [0.3.1](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.3.0...v0.3.1) (2026-05-13)
 
 
