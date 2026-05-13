@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.4.0...v0.5.0) (2026-05-13)
+
+
+### Features
+
+* **graph:** rework gradient flow effect on edge and node highlighting ([be94422](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/be9442298a07cc3529a62d0cef5fb3f11334abab))
+
 # [0.4.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.3.1...v0.4.0) (2026-05-13)
 
 
