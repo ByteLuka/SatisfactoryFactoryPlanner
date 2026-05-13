@@ -32,7 +32,10 @@ function ItemSearch({
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
 
   const filtered = query.trim()
     ? items.filter(
@@ -41,6 +44,30 @@ function ItemSearch({
           i.name.toLowerCase().includes(query.toLowerCase()),
       )
     : [];
+
+  const visibleItems = filtered.slice(0, 30);
+
+  function selectItem(className: string) {
+    onSelect(className);
+    setQuery('');
+    setOpen(false);
+    setActiveIndex(-1);
+  }
+
+  useEffect(() => {
+    setActiveIndex(-1);
+    // Auto-select when exactly one result remains
+    if (filtered.length === 1) {
+      selectItem(filtered[0].className);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered.length === 1 ? filtered[0]?.className : filtered.length]);
+
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [activeIndex]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -52,6 +79,25 @@ function ItemSearch({
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || visibleItems.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(i => (i + 1) % visibleItems.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(i => (i <= 0 ? visibleItems.length - 1 : i - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < visibleItems.length) {
+        selectItem(visibleItems[activeIndex].className);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setActiveIndex(-1);
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <input
@@ -60,23 +106,28 @@ function ItemSearch({
         onChange={e => {
           setQuery(e.target.value);
           setOpen(true);
+          setActiveIndex(-1);
         }}
         onFocus={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className="w-full bg-[#2e2e38] border border-[#3a3a46] rounded-md px-3 py-2 text-base text-[#e8e8f0] placeholder-[#8888a0] focus:outline-none focus:border-[#e8820c]/60"
       />
-      {open && filtered.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#25252d] border border-[#3a3a46] rounded-md shadow-xl max-h-60 overflow-y-auto">
-          {filtered.slice(0, 30).map(item => (
+      {open && visibleItems.length > 0 && (
+        <div ref={listRef} className="absolute top-full left-0 right-0 z-50 mt-1 bg-[#25252d] border border-[#3a3a46] rounded-md shadow-xl max-h-60 overflow-y-auto">
+          {visibleItems.map((item, idx) => (
             <button
               key={item.className}
+              ref={idx === activeIndex ? activeItemRef : null}
               onMouseDown={e => {
                 e.preventDefault();
-                onSelect(item.className);
-                setQuery('');
-                setOpen(false);
+                selectItem(item.className);
               }}
-              className="w-full text-left px-3 py-2 text-base text-[#e8e8f0] hover:bg-[#2e2e38] transition-colors"
+              onMouseEnter={() => setActiveIndex(idx)}
+              className={[
+                'w-full text-left px-3 py-2 text-base text-[#e8e8f0] transition-colors',
+                idx === activeIndex ? 'bg-[#3a3a46]' : 'hover:bg-[#2e2e38]',
+              ].join(' ')}
             >
               {item.name}
             </button>

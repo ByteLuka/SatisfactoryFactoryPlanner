@@ -234,6 +234,10 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 
 **`AppHeader`** (`src/components/AppHeader.tsx`) — used on all three pages. Renders the app title (click → `/`), optional back button, subtitle, step-progress dots, app version badge, and the GitHub stats widget (`src/hooks/useGitHubStats.ts` — fetches live star/fork counts from `api.github.com`, module-level cached).
 
+**`ErrorBoundary`** (`src/components/ErrorBoundary.tsx`) — class component wrapping route-level pages; accepts an optional `fallback` render prop, otherwise shows a full-screen error card.
+
+**`LoadingSpinner`** (`src/components/LoadingSpinner.tsx`) — inline spinner used while `useGameData` is in the `loading` state.
+
 **`__APP_VERSION__`** — injected at build time by `vite.config.ts` via `define: { __APP_VERSION__: JSON.stringify(version) }` (reads `package.json`). Declared globally in `src/types/javascript-lp-solver.d.ts`. Use directly as a string; no import needed.
 
 **Graph node font sizes are intentionally tiny** — `text-[10px]` in node files (`RecipeNode`, `ResourceNode`, etc.) must not be bumped without also updating the hardcoded port positions in `graphLayout.ts` (`y = 90 + index × 36`) and node size estimates in `planTransformers.ts`.
