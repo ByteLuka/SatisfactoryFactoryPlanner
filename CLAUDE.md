@@ -56,6 +56,7 @@ The Docker image name is hardcoded as `satisfactory-factory-planner` in the work
 ## Stack
 
 - TypeScript 5.5 strict mode, React 19, Vite 8, React Router 7, Tailwind CSS 4
+- **TypeScript config split:** `tsconfig.json` covers `src/` (browser code); `tsconfig.node.json` covers `vite.config.ts` and `scripts/` with `"types": ["node"]` — `@types/node` is a dev dependency
 - **Phase 2:** `@xyflow/react` (React Flow v12), `elkjs/lib/elk.bundled.js` (lazy-loaded), `javascript-lp-solver` (Web Worker)
 - Entry point: `index.html` → `src/main.tsx` → `src/App.tsx`
 - Tailwind v4: configured via `@tailwindcss/vite` plugin (no `tailwind.config.js`); custom tokens in `src/index.css` under `@theme`
@@ -86,7 +87,7 @@ Two React Context + `useReducer` stores:
 **Game state (Phase 1 output):** `GameState` holds `projectPhase`, `unlockedMilestones`, `completedMamResearch`, `unlockedAlternates` — all keyed by schematic `className` strings.
 - `src/types/game-state.ts`, `src/store/gameStateReducer.ts`, `src/store/GameStateContext.tsx`
 - `src/hooks/useGameState.ts` — consumer hook with boolean helpers (`isMilestoneUnlocked`, `isMamResearched`, `isAlternateUnlocked`)
-- Phase-downgrade pruning (clearing milestones above the new phase's max tier) is handled in `PhaseProgressPanel`'s `handleDotClick`, not in the reducer. `pruneInaccessibleMilestones` in `gameStateReducer.ts` exists but is not called.
+- Phase-downgrade pruning (clearing milestones above the new phase's max tier) is handled in `PhaseProgressPanel`'s `handleDotClick`, not in the reducer — pruning requires `gameData.milestonesByTier` which is not available inside a reducer.
 
 **Plan state (Phase 2):** `PlanState` in `src/store/PlanContext.tsx` holds:
 - `targets` — items to produce with optional fixed rates (undefined rate = maximize)
@@ -158,7 +159,7 @@ Single page at `src/components/phase1/Phase1Page.tsx`, composed of three section
 
 **`SegmentedProgressBar`** (`src/components/phase1/SegmentedProgressBar.tsx`) — horizontal bar divided into `total` equal segments with 2 px gaps, filling left-to-right based on `value`. Used for per-phase milestone progress in `PhaseProgressPanel`.
 
-`MilestoneChecklist.tsx`, `ProjectPhaseSelector.tsx`, and `src/pages/Phase2Placeholder.tsx` are unused legacy files left in place.
+`ProjectPhaseSelector.tsx` (`src/components/phase1/`) is an unused legacy file left in place.
 
 ### Phase 2 — Production Planner (implemented)
 

@@ -1,8 +1,17 @@
 import Solver from 'javascript-lp-solver';
-import type { MainToWorker, WorkerToMain, SolverInput, SolverOutput, PlanNode, PlanEdge, ProductionPlan, ManualInput, RecipePowerCoefficient } from '../types/plan';
-import type { Recipe } from '../types/domain';
-import { OptimizationStrategy } from '../types/plan';
-import { FREELY_AVAILABLE_ITEMS } from '../data/resources';
+import type {
+  MainToWorker,
+  ManualInput,
+  PlanEdge,
+  PlanNode,
+  RecipePowerCoefficient,
+  SolverInput,
+  SolverOutput,
+  WorkerToMain
+} from '../types/plan';
+import {OptimizationStrategy} from '../types/plan';
+import type {Recipe} from '../types/domain';
+import {FREELY_AVAILABLE_ITEMS} from '../data/resources';
 
 function ratePerMachine(amount: number, cycleTimeSec: number): number {
   return (amount * 60) / cycleTimeSec;
@@ -44,16 +53,16 @@ function buildAndSolve(
     const variable: Record<string, number> = {};
 
     if (strategy === OptimizationStrategy.MAX_OUTPUT) {
-      let objCoeff = 0;
+      let objCoefficient = 0;
       for (const target of targets) {
         if (target.ratePerMin !== undefined) continue;
         const prod = recipe.products.find(p => p.itemClassName === target.itemClassName);
         const cons = recipe.ingredients.find(i => i.itemClassName === target.itemClassName);
         const prodRate = prod ? ratePerMachine(prod.amount, recipe.time) : 0;
         const consRate = cons ? ratePerMachine(cons.amount, recipe.time) : 0;
-        objCoeff += prodRate - consRate;
+        objCoefficient += prodRate - consRate;
       }
-      variable['objective'] = objCoeff;
+      variable['objective'] = objCoefficient;
     } else if (strategy === OptimizationStrategy.OPT_POWER) {
       // Use per-machine power as LP weight to minimize power-weighted machine count.
       // OPT_POWER further refines via greedy elimination using actual underclocked power.
@@ -88,11 +97,10 @@ function buildAndSolve(
   for (const mi of manualInputs) {
     if (mi.ratePerMin <= 0) continue;
     const varName = `import_${mi.itemClassName}`;
-    const variable: Record<string, number> = {
+    variables[varName] = {
       objective: 0,
       [`balance_${mi.itemClassName}`]: 1,
     };
-    variables[varName] = variable;
     constraints[`max_import_${mi.itemClassName}`] = { max: mi.ratePerMin };
   }
 
@@ -101,7 +109,7 @@ function buildAndSolve(
     opType: strategy === OptimizationStrategy.MAX_OUTPUT ? 'max' : 'min',
     constraints,
     variables,
-    // Import variables have objective: 0, so they are never penalised regardless of strategy
+    // Import variables have objective: 0, so they are never penalized regardless of strategy
   });
 }
 
@@ -252,7 +260,7 @@ function computeEdges(
     if (totalSourceRate < 0.01) continue;
 
     // Greedy two-pointer assignment: sort both sides descending and drain the largest source
-    // into the largest sink before moving on. This minimises the number of split connections
+    // into the largest sink before moving on. This minimizes the number of split connections
     // (at most sources+sinks-1 edges) and keeps whole-producer routes where possible, e.g.
     // a refinery that alone covers a downstream consumer won't be split across multiple sinks.
     const sortedSources = [...sources].sort((a, b) => b.rate - a.rate)

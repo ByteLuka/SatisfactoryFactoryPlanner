@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useGitHubStats } from '../hooks/useGitHubStats';
+import React from "react";
 
 const REPO_URL = 'https://github.com/byteluka/SatisfactoryFactoryPlanner';
 

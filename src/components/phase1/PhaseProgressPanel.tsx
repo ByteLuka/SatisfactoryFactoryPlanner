@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { GameData, Recipe, Schematic } from '../../types/domain';
 import {
   PROJECT_PHASE_MAX_TIER,

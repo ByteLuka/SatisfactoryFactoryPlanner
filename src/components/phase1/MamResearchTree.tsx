@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { GameData, MamTree } from '../../types/domain';
 import { useGameState } from '../../hooks/useGameState';
 import { CircularProgress } from './CircularProgress';

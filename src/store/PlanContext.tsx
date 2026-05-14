@@ -1,7 +1,7 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
-import type { ProductionTarget, ResourcePool, SolverOutput, ManualInput, GraphOptions } from '../types/plan';
-import { OptimizationStrategy } from '../types/plan';
-import { DEFAULT_RESOURCE_POOL, MAP_RESOURCE_POOL_LIMITS } from '../data/resources';
+import {createContext, type ReactNode, useContext, useEffect, useReducer} from 'react';
+import type {GraphOptions, ManualInput, ProductionTarget, ResourcePool, SolverOutput} from '../types/plan';
+import {OptimizationStrategy} from '../types/plan';
+import {DEFAULT_RESOURCE_POOL, MAP_RESOURCE_POOL_LIMITS} from '../data/resources';
 
 const STORAGE_KEY = 'sfp_plan_state';
 

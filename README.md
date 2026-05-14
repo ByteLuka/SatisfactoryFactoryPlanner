@@ -5,7 +5,7 @@
 [![Release](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/actions/workflows/release.yml/badge.svg)](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/actions/workflows/release.yml)
 [![Docker Image](https://ghcr-badge.egpl.dev/byteluka/satisfactory-factory-planner/latest_tag?trim=major&label=ghcr.io)](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/pkgs/container/satisfactory-factory-planner)
 
-A browser-based planning tool for [Satisfactory](https://www.satisfactorygame.com/). Declare your game progress — Space Elevator phase, HUB milestones, MAM research, and alternate recipes — then let the planner compute optimal production chains and visualise the factory graph.
+A browser-based planning tool for [Satisfactory](https://www.satisfactorygame.com/). Declare your game progress — Space Elevator phase, HUB milestones, MAM research, and alternate recipes — then let the planner compute optimal production chains and visualize the factory graph.
 
 > **Early development:** This project is in an early stage. Results may be incomplete or incorrect, and you will likely encounter bugs. Use it as a guide, not as ground truth.
 
@@ -19,18 +19,18 @@ A browser-based planning tool for [Satisfactory](https://www.satisfactorygame.co
 - Manage alternate recipes unlocked from Hard Drives, with eligibility checks based on your current unlocks
 
 ### Phase 2 — Production Planner
-- Define production targets with optional fixed rates; uncapped targets are maximised automatically
+- Define production targets with optional fixed rates; uncapped targets are maximized automatically
 - Import external supplies from other factories
 - Toggle individual recipes on or off to constrain the solver
 - Configure raw resource pool limits per item
-- Four optimisation strategies: maximise output, balanced, minimise machines, minimise active recipes
+- Four optimization strategies: maximize output, balanced, minimize machines, minimize active recipes
 - Interactive factory graph with ELK auto-layout, edge highlighting, and manual node repositioning
 - Power consumption summary (min/max, with and without underclocking)
 
 ### Phase 3 — Interactive Factory Layout (planned)
 - Visual node-graph editor with machines as nodes and belts/pipes as edges
 - Drag and reposition machines, modules, and connections
-- Organise factories into named modules shown as visual groups
+- Organize factories into named modules shown as visual groups
 - Read-only rebuild mode: a checklist-style view to follow step by step while rebuilding in-game
 
 ---
@@ -165,7 +165,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) a
 | `feat!:` / `BREAKING CHANGE:` | major (`0.1.0` → `1.0.0`) |
 
 On every push to `main`, the release pipeline:
-1. Analyses commits since the last tag and determines the next version
+1. Analyzes commits since the last tag and determines the next version
 2. Updates `package.json`, `Chart.yaml`, and `CHANGELOG.md`
 3. Creates a git tag and a GitHub Release with auto-generated release notes
 4. Builds and pushes the Docker image to GHCR

@@ -216,7 +216,7 @@ function classifyProducedIn(producedInStr) {
 
   const inMachine = classNames.some(cn => manufacturerClassNames.has(cn));
   const forBuilding = producedInStr.includes('BuildGun');
-  // WorkBenchComponent = hand crafting; WorkshopComponent = equipment workshop
+  // WorkBenchComponent = handcrafting; WorkshopComponent = equipment workshop
   const inHand = producedInStr.includes('WorkBenchComponent');
   const inWorkshop =
     producedInStr.includes('WorkshopComponent') ||

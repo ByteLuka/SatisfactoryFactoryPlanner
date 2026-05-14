@@ -1,7 +1,7 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react';
-import type { GameState } from '../types/game-state';
-import { ProjectPhase, createInitialGameState } from '../types/game-state';
-import { gameStateReducer, type GameStateAction } from './gameStateReducer';
+import {createContext, type ReactNode, useContext, useEffect, useReducer} from 'react';
+import type {GameState} from '../types/game-state';
+import {createInitialGameState} from '../types/game-state';
+import {type GameStateAction, gameStateReducer} from './gameStateReducer';
 
 const STORAGE_KEY = 'sfp_game_state';
 

@@ -41,7 +41,7 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
     : planState.strategy;
 
   const recipePowerCoefficients = useMemo<Record<string, RecipePowerCoefficient>>(() => {
-    const coeffs: Record<string, RecipePowerCoefficient> = {};
+    const coefficients: Record<string, RecipePowerCoefficient> = {};
     for (const recipe of enabledRecipes) {
       const buildingClassName = recipe.producedInClassNames.find(cn => gameData.buildings[cn]);
       const building = buildingClassName ? gameData.buildings[buildingClassName] : undefined;
@@ -49,12 +49,12 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
       const basePower = recipe.isVariablePower
         ? (recipe.minPower + recipe.maxPower) / 2
         : building.powerConsumption;
-      coeffs[recipe.className] = {
+      coefficients[recipe.className] = {
         basePower,
         exponent: building.powerConsumptionExponent,
       };
     }
-    return coeffs;
+    return coefficients;
   }, [enabledRecipes, gameData.buildings]);
 
   function handleCompute() {

@@ -27,13 +27,6 @@ const INPUT_COLOR = '#60a5fa';    // blue-400 — consumed ingredients
 const OUTPUT_COLOR = '#4ade80';   // green-400 — target products
 const BYPRODUCT_COLOR = '#fbbf24'; // amber-400 — byproducts (non-target outputs)
 
-const HANDLE_SPACING = 36;
-const HANDLE_OFFSET_START = 56;
-
-function handleTop(index: number): number {
-  return HANDLE_OFFSET_START + index * HANDLE_SPACING;
-}
-
 export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeData; selected?: boolean }) {
   const [editingCount, setEditingCount] = useState(false);
   const [inputValue, setInputValue] = useState('');

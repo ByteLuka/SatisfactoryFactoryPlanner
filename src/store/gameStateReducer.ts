@@ -1,6 +1,5 @@
-import type { GameState } from '../types/game-state';
-import { ProjectPhase, createInitialGameState } from '../types/game-state';
-import { PROJECT_PHASE_MAX_TIER } from '../types/domain';
+import type {GameState} from '../types/game-state';
+import {createInitialGameState, ProjectPhase} from '../types/game-state';
 
 export type GameStateAction =
   | { type: 'SET_PROJECT_PHASE'; phase: ProjectPhase }
@@ -18,21 +17,6 @@ export type GameStateAction =
 
 function toggleInArray(arr: string[], value: string): string[] {
   return arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
-}
-
-function pruneInaccessibleMilestones(
-  milestones: string[],
-  phase: ProjectPhase,
-  milestonesByTier: Record<number, { className: string }[]>,
-): string[] {
-  const maxTier = PROJECT_PHASE_MAX_TIER[phase];
-  const accessible = new Set<string>();
-  for (let tier = 1; tier <= maxTier; tier++) {
-    for (const m of milestonesByTier[tier] ?? []) {
-      accessible.add(m.className);
-    }
-  }
-  return milestones.filter(cn => accessible.has(cn));
 }
 
 export function gameStateReducer(state: GameState, action: GameStateAction): GameState {
@@ -69,5 +53,3 @@ export function gameStateReducer(state: GameState, action: GameStateAction): Gam
       return state;
   }
 }
-
-export { pruneInaccessibleMilestones };

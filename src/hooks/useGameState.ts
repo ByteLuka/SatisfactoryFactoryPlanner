@@ -1,7 +1,6 @@
-import { useGameStateContext } from '../store/GameStateContext';
-import type { GameState } from '../types/game-state';
-import { ProjectPhase } from '../types/game-state';
-import type { GameStateAction } from '../store/gameStateReducer';
+import {useGameStateContext} from '../store/GameStateContext';
+import type {GameState} from '../types/game-state';
+import type {GameStateAction} from '../store/gameStateReducer';
 
 export interface UseGameStateReturn {
   gameState: GameState;

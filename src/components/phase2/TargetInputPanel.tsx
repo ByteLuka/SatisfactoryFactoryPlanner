@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Item } from '../../types/domain';
 import { OptimizationStrategy } from '../../types/plan';
 import type { PlanAction } from '../../store/PlanContext';
@@ -162,9 +162,6 @@ export function TargetInputPanel({ planState, dispatch, producibleItems, onCompu
 
   const itemByClassName: Record<string, Item> = {};
   for (const item of producibleItems) itemByClassName[item.className] = item;
-
-  // Effective strategy: if any target has no rate, force MAX_OUTPUT
-  const effectiveStrategy = anyUnratedTarget ? OptimizationStrategy.MAX_OUTPUT : strategy;
 
   // Optimization options that are user-selectable (not MAX_OUTPUT — that's implicit)
   const optimizationOptions = [

@@ -1,27 +1,27 @@
-import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-  ReactFlow,
   Background,
   Controls,
-  useNodesState,
-  useEdgesState,
-  type NodeChange,
-  type Node,
   type Edge,
+  type Node,
+  type NodeChange,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { ProductionPlan, ProductionTarget, GraphOptions } from '../../types/plan';
-import type { GameData } from '../../types/domain';
-import type { PlanAction, NodePosition } from '../../store/PlanContext';
-import { ResourceNode } from './nodes/ResourceNode';
-import { RecipeNode } from './nodes/RecipeNode';
-import { ProductNode } from './nodes/ProductNode';
-import { ImportNode } from './nodes/ImportNode';
-import { ByproductNode } from './nodes/ByproductNode';
-import { ELKRouteEdge } from './ELKRouteEdge';
-import { transformPlanToGraphData } from '../../data/planTransformers';
-import { computeLayout } from '../../utils/graphLayout';
+import type {GraphOptions, ProductionPlan, ProductionTarget} from '../../types/plan';
+import type {GameData} from '../../types/domain';
+import type {PlanAction} from '../../store/PlanContext';
+import {ResourceNode} from './nodes/ResourceNode';
+import {RecipeNode} from './nodes/RecipeNode';
+import {ProductNode} from './nodes/ProductNode';
+import {ImportNode} from './nodes/ImportNode';
+import {ByproductNode} from './nodes/ByproductNode';
+import {ELKRouteEdge} from './ELKRouteEdge';
+import {transformPlanToGraphData} from '../../data/planTransformers';
+import {computeLayout} from '../../utils/graphLayout';
 
 const nodeTypes = {
   resourceNode: ResourceNode,
