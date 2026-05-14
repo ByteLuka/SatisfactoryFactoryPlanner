@@ -236,35 +236,48 @@ function computeEdges(
       sources = producers.map(n => ({ nodeId: `recipe_${n.recipeClassName}`, rate: n.outputRates[itemClassName] ?? 0 }));
     }
 
+    // Non-target surplus (production > consumption) and fully unconsumed outputs both route
+    // to a byproduct sink. Previously only the fully-unconsumed case was handled, causing
+    // partial surplus (e.g. two refineries producing more heavy oil residue than the next
+    // stage consumes) to be silently dropped from the graph.
     const sinks: Array<{ nodeId: string; rate: number }> = [
       ...consumers.map(n => ({ nodeId: `recipe_${n.recipeClassName}`, rate: n.inputRates[itemClassName] ?? 0 })),
-      ...(isTarget && surplus > 0.01 ? [{ nodeId: `product_${itemClassName}`, rate: surplus }] : []),
+      ...(surplus > 0.01 && isTarget ? [{ nodeId: `product_${itemClassName}`, rate: surplus }] : []),
+      ...(surplus > 0.01 && !isTarget && !isRawResource && !isImported ? [{ nodeId: `byproduct_${itemClassName}`, rate: surplus }] : []),
     ];
-
-    // Unconsumed recipe output that isn't a target → byproduct sink
-    const isByproduct = !isRawResource && !isImported && producers.length > 0 && sinks.length === 0 && totalProduction > 0.01;
-    if (isByproduct) {
-      sinks.push({ nodeId: `byproduct_${itemClassName}`, rate: totalProduction });
-    }
 
     if (sources.length === 0 || sinks.length === 0) continue;
 
     const totalSourceRate = sources.reduce((s, src) => s + src.rate, 0);
     if (totalSourceRate < 0.01) continue;
 
-    for (const source of sources) {
-      const fraction = source.rate / totalSourceRate;
-      for (const sink of sinks) {
-        const rate = sink.rate * fraction;
-        if (rate < 0.01) continue;
+    // Greedy two-pointer assignment: sort both sides descending and drain the largest source
+    // into the largest sink before moving on. This minimises the number of split connections
+    // (at most sources+sinks-1 edges) and keeps whole-producer routes where possible, e.g.
+    // a refinery that alone covers a downstream consumer won't be split across multiple sinks.
+    const sortedSources = [...sources].sort((a, b) => b.rate - a.rate)
+      .map(s => ({ ...s, remaining: s.rate }));
+    const sortedSinks = [...sinks].sort((a, b) => b.rate - a.rate)
+      .map(s => ({ ...s, remaining: s.rate }));
+
+    let srcIdx = 0, snkIdx = 0;
+    while (srcIdx < sortedSources.length && snkIdx < sortedSinks.length) {
+      const src = sortedSources[srcIdx];
+      const snk = sortedSinks[snkIdx];
+      const allocated = Math.min(src.remaining, snk.remaining);
+      if (allocated > 0.01) {
         edges.push({
-          id: `edge_${source.nodeId}_${sink.nodeId}_${itemClassName}`,
-          fromNodeId: source.nodeId,
-          toNodeId: sink.nodeId,
+          id: `edge_${src.nodeId}_${snk.nodeId}_${itemClassName}`,
+          fromNodeId: src.nodeId,
+          toNodeId: snk.nodeId,
           itemClassName,
-          ratePerMin: rate,
+          ratePerMin: allocated,
         });
       }
+      src.remaining -= allocated;
+      snk.remaining -= allocated;
+      if (src.remaining <= 0.01) srcIdx++;
+      if (snk.remaining <= 0.01) snkIdx++;
     }
   }
 
@@ -369,7 +382,7 @@ function solve(input: SolverInput): SolverOutput {
 
   const resourceLimits = resourcePool.limits;
 
-  const result = buildAndSolve(
+  let result = buildAndSolve(
     availableRecipes,
     rawResources,
     producibleItems,
@@ -384,6 +397,35 @@ function solve(input: SolverInput): SolverOutput {
   if (!result.feasible) {
     const errorMessage = buildInfeasibilityMessage(input, rawResources, producibleItems);
     return { status: 'infeasible', errorMessage };
+  }
+
+  // MAX_OUTPUT phase 2: re-solve as BALANCED with achieved rates fixed.
+  // The MAX_OUTPUT LP assigns objective=0 to recipes that don't produce/consume the target,
+  // so the simplex can freely set those variables to arbitrary values (LP degeneracy). Running
+  // a BALANCED pass with the achieved output locked in eliminates such spurious recipe activity.
+  if (strategy === OptimizationStrategy.MAX_OUTPUT) {
+    const fixedTargets = targets.map(t => {
+      if (t.ratePerMin !== undefined) return t;
+      const netRate = availableRecipes.reduce((sum, recipe) => {
+        const x = (result[`recipe_${recipe.className}`] as number | undefined) ?? 0;
+        const prod = recipe.products.find(p => p.itemClassName === t.itemClassName);
+        const cons = recipe.ingredients.find(i => i.itemClassName === t.itemClassName);
+        const prodRate = prod ? ratePerMachine(prod.amount, recipe.time) : 0;
+        const consRate = cons ? ratePerMachine(cons.amount, recipe.time) : 0;
+        return sum + x * (prodRate - consRate);
+      }, 0);
+      // Subtract a small epsilon so floating-point imprecision doesn't make the BALANCED
+      // solve infeasible when the MAX_OUTPUT result is numerically right at the boundary.
+      return { ...t, ratePerMin: Math.max(0, netRate * 0.9999) };
+    });
+    const cleanResult = buildAndSolve(
+      availableRecipes, rawResources, producibleItems,
+      fixedTargets, resourceLimits, OptimizationStrategy.BALANCED,
+      manualInputs, false, recipePowerCoefficients,
+    );
+    if (cleanResult.feasible) {
+      result = cleanResult;
+    }
   }
 
   // OPT_MACHINES, OPT_RECIPES, and OPT_POWER improve the LP solution by greedily eliminating
