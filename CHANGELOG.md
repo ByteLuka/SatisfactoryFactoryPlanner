@@ -1,3 +1,10 @@
+## [0.5.2](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.1...v0.5.2) (2026-05-14)
+
+
+### Bug Fixes
+
+* **solver:** clean up MAX_OUTPUT degeneracy, show surplus byproducts, and minimize pipe splits with greedy edge assignment ([edf1184](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/edf1184cf5e9b7d226ecf9a8fb0b4b65454a5b2b))
+
 ## [0.5.1](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.0...v0.5.1) (2026-05-13)
 
 
