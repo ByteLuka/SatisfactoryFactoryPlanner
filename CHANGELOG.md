@@ -1,3 +1,10 @@
+## [0.5.6](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.5...v0.5.6) (2026-05-14)
+
+
+### Bug Fixes
+
+* improve recipe node layout and edge routing for long recipe names ([4289070](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/4289070848074b390e7197bbbb44add9a3f6f248))
+
 ## [0.5.5](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.4...v0.5.5) (2026-05-14)
 
 
