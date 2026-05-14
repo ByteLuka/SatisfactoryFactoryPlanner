@@ -249,6 +249,8 @@ Within `RecipeNode`: input item rates are blue (`#60a5fa`), target-item outputs 
 
 **Graph node font sizes are intentionally tiny** — `text-[10px]` in node files (`RecipeNode`, `ResourceNode`, etc.) must not be bumped without also updating the hardcoded port positions in `graphLayout.ts` (`y = 90 + index × 36`) and node size estimates in `planTransformers.ts`.
 
+**RecipeNode width is estimated, not measured** — `estimateRecipeWidth` in `graphLayout.ts` approximates the rendered header width (`~8.5px/char` for `text-sm font-semibold` + 24 px horizontal padding) so ELK routes edges around the real node boundary. If the recipe name font, size, or padding changes in `RecipeNode.tsx`, update this function or edges will overlap wide nodes again. The ALT badge lives in the machine-count row (right-aligned via `ml-auto`) and does not affect the width estimate.
+
 ### Component conventions
 
 - Phase-specific components: `src/components/phase{N}/`

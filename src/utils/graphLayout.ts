@@ -16,6 +16,12 @@ export interface LayoutResult {
 const RECIPE_HANDLE_FIRST_Y = 90;
 const RECIPE_HANDLE_SPACING = 36;
 
+// Estimates the rendered width of a RecipeNode header: text-sm font-semibold (~8.5px/char)
+// + px-3 padding (24px total). ALT badge is in the machine-count row and doesn't affect width.
+function estimateRecipeWidth(recipeName: string): number {
+  return Math.max(260, Math.ceil(recipeName.length * 8.5 + 24));
+}
+
 function getNodeDimensions(node: GraphNode): { width: number; height: number } {
   if (node.type === 'resourceNode') return NODE_DIMENSIONS.resource;
   if (node.type === 'productNode') return NODE_DIMENSIONS.product;
@@ -23,7 +29,9 @@ function getNodeDimensions(node: GraphNode): { width: number; height: number } {
   if (node.type === 'byproductNode') return NODE_DIMENSIONS.byproduct;
   if (node.type === 'recipeNode') {
     const d = node.data;
-    return NODE_DIMENSIONS.recipe(d.inputRates.length, d.outputRates.length);
+    const { height } = NODE_DIMENSIONS.recipe(d.inputRates.length, d.outputRates.length);
+    const width = estimateRecipeWidth(d.recipeName);
+    return { width, height };
   }
   return { width: 200, height: 100 };
 }

@@ -67,13 +67,8 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
     >
       {/* Header */}
       <div className="px-3 pt-3 pb-2 border-b border-[#3a3a46]">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[#e8e8f0] text-sm font-semibold truncate flex-1">{data.recipeName}</span>
-          {data.isAlternate && (
-            <span className="text-[10px] font-bold bg-[#e8820c]/20 text-[#e8820c] border border-[#e8820c]/40 rounded px-1.5 py-0.5 flex-shrink-0">
-              ALT
-            </span>
-          )}
+        <div className="mb-0.5">
+          <span className="text-[#e8e8f0] text-sm font-semibold">{data.recipeName}</span>
         </div>
 
         <div className="flex items-center gap-2 mt-1">
@@ -103,6 +98,11 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
             >
               {displayCount}
               {!isExact && <span className="text-[#8888a0] ml-0.5">*</span>}
+            </span>
+          )}
+          {data.isAlternate && (
+            <span className="ml-auto text-[10px] font-bold bg-[#e8820c]/20 text-[#e8820c] border border-[#e8820c]/40 rounded px-1.5 py-0.5 flex-shrink-0">
+              ALT
             </span>
           )}
         </div>
