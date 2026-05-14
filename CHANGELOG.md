@@ -1,3 +1,10 @@
+## [0.5.3](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.2...v0.5.3) (2026-05-14)
+
+
+### Bug Fixes
+
+* solve inspection warnings ([33ea8c3](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/33ea8c34aa21df7cdb90069a28d1ffd7cbbb80c9))
+
 ## [0.5.2](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.1...v0.5.2) (2026-05-14)
 
 
