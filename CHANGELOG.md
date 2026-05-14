@@ -1,3 +1,10 @@
+## [0.5.4](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.3...v0.5.4) (2026-05-14)
+
+
+### Bug Fixes
+
+* GitHub links ([af159f7](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/af159f7ee47f22b1f42760ba245b379152409d8e))
+
 ## [0.5.3](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.2...v0.5.3) (2026-05-14)
 
 
