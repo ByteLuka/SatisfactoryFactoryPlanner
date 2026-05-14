@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.6...v0.6.0) (2026-05-14)
+
+
+### Features
+
+* add nuclear power plant support with generator recipes and power tracking ([f8b69ea](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/f8b69eae97f1be052e33f330691be1ab66de3861))
+
 ## [0.5.6](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.5...v0.5.6) (2026-05-14)
 
 
