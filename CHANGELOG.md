@@ -1,3 +1,10 @@
+## [0.5.5](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.4...v0.5.5) (2026-05-14)
+
+
+### Bug Fixes
+
+* synchronize flow animation on converging graph edges ([7a58829](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/7a5882962ef7b6a14113d2859db32b48c112d054))
+
 ## [0.5.4](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.3...v0.5.4) (2026-05-14)
 
 
