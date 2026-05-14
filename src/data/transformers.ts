@@ -71,6 +71,7 @@ function transformBuilding(className: string, raw: RawBuilding): Building {
     description: raw.description,
     powerConsumption: raw.metadata.powerConsumption,
     powerConsumptionExponent: raw.metadata.powerConsumptionExponent,
+    powerProduction: raw.metadata.powerProduction ?? 0,
   };
 }
 

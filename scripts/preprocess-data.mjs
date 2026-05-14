@@ -366,6 +366,107 @@ for (const group of manufacturerGroups) {
   }
 }
 
+// ── Nuclear generators ───────────────────────────────────────────────────────
+// FGBuildableGeneratorNuclear defines fuel consumption via mFuel, not FGRecipe.
+// Synthesize inMachine recipes and add the building so the LP solver can plan nuclear power.
+
+const nuclearGenGroup = findGroup('FGBuildableGeneratorNuclear');
+/** @type {Array<{ className: string; fuelRodClassName: string }>} */
+const synthesizedGeneratorRecipes = [];
+
+if (nuclearGenGroup) {
+  for (const cls of nuclearGenGroup.Classes) {
+    const buildingClassName = cls.ClassName;
+    if (!buildingClassName) continue;
+
+    const powerProduction = parseNum(cls.mPowerProduction);
+
+    buildings[buildingClassName] = {
+      slug: toSlug(cls.mDisplayName || buildingClassName),
+      name: cls.mDisplayName || buildingClassName,
+      description: (cls.mDescription || '').replace(/\r\n/g, '\n'),
+      className: buildingClassName,
+      categories: [],
+      buildMenuPriority: 0,
+      metadata: {
+        powerConsumption: 0,
+        powerConsumptionExponent: 1.321928,
+        manufacturingSpeed: 1,
+        powerProduction,
+      },
+      size: { width: 0, height: 0, length: 0 },
+    };
+
+    const fuelLoadAmount = parseInt10(String(cls.mFuelLoadAmount ?? '1'));
+    const supplementalAmount = parseNum(String(cls.mSupplementalLoadAmount ?? '0'));
+
+    for (const fuel of (cls.mFuel || [])) {
+      const fuelRodClassName = fuel.mFuelClass;
+      if (!fuelRodClassName) continue;
+
+      const fuelItem = items[fuelRodClassName];
+      if (!fuelItem || fuelItem.energyValue <= 0) continue;
+
+      const cycleTime = fuelItem.energyValue / powerProduction;
+      const recipeClassName = `GeneratorFuel_${fuelRodClassName}`;
+      const fuelName = fuelItem.name || fuelRodClassName;
+
+      // mSupplementalResourceClass is stored per-fuel entry, already as a plain class name
+      const supplementalClass = fuel.mSupplementalResourceClass || null;
+
+      const ingredients = [{ item: fuelRodClassName, amount: fuelLoadAmount }];
+      if (supplementalClass && supplementalAmount > 0) {
+        ingredients.push({ item: supplementalClass, amount: supplementalAmount });
+      }
+
+      const products = [];
+      if (fuel.mByproduct && fuel.mByproductAmount) {
+        const byproductAmount = parseInt10(String(fuel.mByproductAmount));
+        if (byproductAmount > 0) {
+          products.push({ item: fuel.mByproduct, amount: byproductAmount });
+        }
+      }
+
+      recipes[recipeClassName] = {
+        slug: toSlug(fuelName),
+        name: fuelName,
+        className: recipeClassName,
+        alternate: false,
+        time: cycleTime,
+        inHand: false,
+        forBuilding: false,
+        inWorkshop: false,
+        inMachine: true,
+        manualTimeMultiplier: 1,
+        ingredients,
+        products,
+        producedIn: [buildingClassName],
+        isVariablePower: false,
+        minPower: 0,
+        maxPower: 0,
+      };
+
+      synthesizedGeneratorRecipes.push({ className: recipeClassName, fuelRodClassName });
+    }
+  }
+}
+
+// Link each synthesized generator recipe to the schematic that unlocks its fuel rod's
+// manufacturing recipe, so they become available when the player unlocks the fuel rod.
+for (const { className: genRecipeClassName, fuelRodClassName } of synthesizedGeneratorRecipes) {
+  const manufacturingRecipe = Object.values(recipes).find(
+    r => r.inMachine && !r.alternate && r.products.some(p => p.item === fuelRodClassName),
+  );
+  if (!manufacturingRecipe) continue;
+
+  const unlockingSchematic = Object.values(schematics).find(
+    s => s.unlock.recipes.includes(manufacturingRecipe.className),
+  );
+  if (!unlockingSchematic) continue;
+
+  unlockingSchematic.unlock.recipes.push(genRecipeClassName);
+}
+
 // ── Write output ─────────────────────────────────────────────────────────────
 
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });

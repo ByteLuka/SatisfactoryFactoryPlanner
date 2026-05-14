@@ -127,6 +127,9 @@ function buildRecipeNodes(
       liquid: gameData.items[cn]?.liquid ?? false,
     }));
 
+    const buildingClassName = recipe?.producedInClassNames.find(cn => gameData.buildings[cn]);
+    const building = buildingClassName ? gameData.buildings[buildingClassName] : undefined;
+
     return {
       id: planNode.id,
       type: 'recipeNode' as const,
@@ -142,6 +145,7 @@ function buildRecipeNodes(
         targetItemClassNames,
         isAlternate: recipe?.alternate ?? false,
         isManualMode,
+        powerProductionMwPerMachine: building?.powerProduction ?? 0,
         onMachineCountChange: (count: number) =>
           onMachineCountChange(planNode.recipeClassName, count),
       },

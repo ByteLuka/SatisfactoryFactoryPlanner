@@ -20,6 +20,7 @@ export interface RecipeNodeData extends Record<string, unknown> {
   targetItemClassNames: string[];
   isAlternate: boolean;
   isManualMode: boolean;
+  powerProductionMwPerMachine: number;
   onMachineCountChange: (count: number) => void;
 }
 
@@ -103,6 +104,11 @@ export function RecipeNode({ data, selected }: NodeProps & { data: RecipeNodeDat
           {data.isAlternate && (
             <span className="ml-auto text-[10px] font-bold bg-[#e8820c]/20 text-[#e8820c] border border-[#e8820c]/40 rounded px-1.5 py-0.5 flex-shrink-0">
               ALT
+            </span>
+          )}
+          {data.powerProductionMwPerMachine > 0 && (
+            <span className="ml-auto text-[10px] font-bold bg-[#166534]/20 text-[#4ade80] border border-[#4ade80]/40 rounded px-1.5 py-0.5 flex-shrink-0">
+              ⚡ {(data.machineCountExact * data.powerProductionMwPerMachine).toFixed(0)} MW
             </span>
           )}
         </div>

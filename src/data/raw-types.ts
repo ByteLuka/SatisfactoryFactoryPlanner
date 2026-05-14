@@ -72,6 +72,7 @@ export interface RawBuildingMetadata {
   powerConsumption: number;
   powerConsumptionExponent: number;
   manufacturingSpeed: number;
+  powerProduction?: number;
 }
 
 export interface RawBuilding {

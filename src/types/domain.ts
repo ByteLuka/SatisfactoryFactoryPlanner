@@ -70,6 +70,7 @@ export interface Building {
   description: string;
   powerConsumption: number;
   powerConsumptionExponent: number;
+  powerProduction: number;
 }
 
 /** A named MAM research tree (e.g. "Caterium", "Quartz"). */

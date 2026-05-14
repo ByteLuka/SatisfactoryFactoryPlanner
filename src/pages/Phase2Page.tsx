@@ -80,6 +80,7 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
     let maxNotUnderclocked = 0;
     let minUnderclocked = 0;
     let maxUnderclocked = 0;
+    let totalPowerProduced = 0;
 
     for (const node of activePlan.nodes) {
       const recipe = gameData.recipes[node.recipeClassName];
@@ -96,6 +97,12 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
       const frac = exact - full;
       const exponent = building.powerConsumptionExponent;
 
+      if (building.powerProduction > 0) {
+        // Power production scales linearly with clock speed: exact fractional count * MW per machine
+        totalPowerProduced += exact * building.powerProduction;
+        continue;
+      }
+
       const basePowerMin = recipe.isVariablePower ? recipe.minPower : building.powerConsumption;
       const basePowerMax = recipe.isVariablePower ? recipe.maxPower : building.powerConsumption;
 
@@ -108,7 +115,7 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
       maxUnderclocked += underclockedMax;
     }
 
-    return { minNotUnderclocked, maxNotUnderclocked, minUnderclocked, maxUnderclocked };
+    return { minNotUnderclocked, maxNotUnderclocked, minUnderclocked, maxUnderclocked, totalPowerProduced };
   }, [activePlan, gameData, planState.manualMachineCounts]);
 
   const errorMessage =
@@ -183,6 +190,15 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
                           <span className="text-[#e8e8f0] font-mono">{powerStats.maxUnderclocked.toFixed(1)} MW</span>
                         </div>
                       </div>
+                      {powerStats.totalPowerProduced > 0 && (
+                        <div className="mt-3 pt-3 border-t border-[#3a3a46]">
+                          <p className="text-[#8888a0] text-sm font-semibold mb-2">Power produced</p>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-[#8888a0] pl-2">Total</span>
+                            <span className="text-[#4ade80] font-mono">{powerStats.totalPowerProduced.toFixed(0)} MW</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {Object.keys(activePlan.resourceUsage).length > 0 && (

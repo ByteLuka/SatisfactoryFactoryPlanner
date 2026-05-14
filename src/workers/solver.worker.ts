@@ -292,10 +292,52 @@ function computeEdges(
   return edges;
 }
 
+function formatItemName(className: string): string {
+  return className.replace(/^Desc_/, '').replace(/_C$/, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
+}
+
+/**
+ * Traces the ingredient dependency graph from target items and collects items that have
+ * no available recipe and are not raw resources. These are the "holes" that make the
+ * production chain infeasible — typically items whose unlocking milestone hasn't been checked.
+ */
+function findMissingChainItems(
+  targetClassNames: string[],
+  availableRecipes: Recipe[],
+  solverProducibleItems: Set<string>,
+  rawResources: Set<string>,
+): string[] {
+  const missing = new Set<string>();
+  const visited = new Set<string>();
+  const stack = [...targetClassNames];
+
+  while (stack.length > 0) {
+    const item = stack.pop()!;
+    if (visited.has(item)) continue;
+    visited.add(item);
+
+    if (rawResources.has(item) || FREELY_AVAILABLE_ITEMS.has(item)) continue;
+
+    if (!solverProducibleItems.has(item)) {
+      missing.add(item);
+      continue;
+    }
+
+    for (const recipe of availableRecipes) {
+      if (!recipe.products.some(p => p.itemClassName === item)) continue;
+      for (const ingredient of recipe.ingredients) {
+        if (!visited.has(ingredient.itemClassName)) stack.push(ingredient.itemClassName);
+      }
+    }
+  }
+
+  return [...missing];
+}
+
 function buildInfeasibilityMessage(
   input: SolverInput,
   rawResources: Set<string>,
-  producibleItems: Set<string>,
+  solverProducibleItems: Set<string>,
   strategy = OptimizationStrategy.BALANCED,
 ): string {
   // Use the original strategy for the unconstrained solve so unrated MAX_OUTPUT targets
@@ -305,7 +347,7 @@ function buildInfeasibilityMessage(
   const unconstrained = buildAndSolve(
     input.availableRecipes,
     rawResources,
-    producibleItems,
+    solverProducibleItems,
     input.targets,
     {},
     unconstrainedStrategy,
@@ -315,11 +357,22 @@ function buildInfeasibilityMessage(
 
   if (!unconstrained.feasible) {
     const unproducibleTargets = input.targets
-      .filter(t => !producibleItems.has(t.itemClassName))
+      .filter(t => !solverProducibleItems.has(t.itemClassName))
       .map(t => t.itemClassName);
     if (unproducibleTargets.length > 0) {
-      return `These target items have no available recipe to produce them: ${unproducibleTargets.join(', ')}. Unlock more milestones or MAM research.`;
+      return `These target items have no available recipe to produce them: ${unproducibleTargets.map(formatItemName).join(', ')}. Unlock more milestones or MAM research.`;
     }
+
+    const missingIntermediates = findMissingChainItems(
+      input.targets.map(t => t.itemClassName),
+      input.availableRecipes,
+      solverProducibleItems,
+      rawResources,
+    );
+    if (missingIntermediates.length > 0) {
+      return `Missing required intermediate items with no available recipe: ${missingIntermediates.map(formatItemName).join(', ')}. Unlock the milestones that produce these items.`;
+    }
+
     return 'Production plan is infeasible — the target items cannot be produced with the available recipes.';
   }
 
@@ -334,9 +387,8 @@ function buildInfeasibilityMessage(
 
     const available = input.resourcePool.limits[resourceClassName] ?? 0;
     if (totalConsumption > available + 0.01) {
-      const resourceName = resourceClassName.replace('Desc_', '').replace('_C', '').replace(/([A-Z])/g, ' $1').trim();
       shortfalls.push(
-        `${resourceName}: needs ${totalConsumption.toFixed(1)}/min, pool has ${available.toFixed(1)}/min`,
+        `${formatItemName(resourceClassName)}: needs ${totalConsumption.toFixed(1)}/min, pool has ${available.toFixed(1)}/min`,
       );
     }
   }
@@ -378,8 +430,18 @@ function solve(input: SolverInput): SolverOutput {
     }
   }
 
-  // Raw resources: consumed but not producible and not freely available
+  const resourceLimits = resourcePool.limits;
+
+  // Raw resources: items drawn from the world (extraction pool) rather than produced by recipes.
+  // Seeding from resourceLimits first ensures that items like Water — which technically appear
+  // as products of the Unpackage Water recipe — are always treated as raw resources. Without
+  // this, Water enters producibleItems via that recipe, gets a balance constraint, and the
+  // circular packaging loop (water → packaged → water) can never satisfy it, making any plan
+  // that consumes raw water infeasible.
   const rawResources = new Set<string>();
+  for (const cn of Object.keys(resourceLimits)) {
+    if (!FREELY_AVAILABLE_ITEMS.has(cn)) rawResources.add(cn);
+  }
   for (const recipe of availableRecipes) {
     for (const ingredient of recipe.ingredients) {
       if (!producibleItems.has(ingredient.itemClassName) && !FREELY_AVAILABLE_ITEMS.has(ingredient.itemClassName)) {
@@ -388,12 +450,15 @@ function solve(input: SolverInput): SolverOutput {
     }
   }
 
-  const resourceLimits = resourcePool.limits;
+  // Raw resources supply the LP through the resource pool, not through balance constraints.
+  // Removing them from producibleItems prevents the LP from creating a balance_<item> constraint
+  // that it then can't satisfy (no net recipe production for extracted resources).
+  const solverProducibleItems = new Set([...producibleItems].filter(cn => !rawResources.has(cn)));
 
   let result = buildAndSolve(
     availableRecipes,
     rawResources,
-    producibleItems,
+    solverProducibleItems,
     targets,
     resourceLimits,
     strategy,
@@ -403,7 +468,7 @@ function solve(input: SolverInput): SolverOutput {
   );
 
   if (!result.feasible) {
-    const errorMessage = buildInfeasibilityMessage(input, rawResources, producibleItems);
+    const errorMessage = buildInfeasibilityMessage(input, rawResources, solverProducibleItems);
     return { status: 'infeasible', errorMessage };
   }
 
@@ -427,7 +492,7 @@ function solve(input: SolverInput): SolverOutput {
       return { ...t, ratePerMin: Math.max(0, netRate * 0.9999) };
     });
     const cleanResult = buildAndSolve(
-      availableRecipes, rawResources, producibleItems,
+      availableRecipes, rawResources, solverProducibleItems,
       fixedTargets, resourceLimits, OptimizationStrategy.BALANCED,
       manualInputs, false, recipePowerCoefficients,
     );
@@ -444,7 +509,7 @@ function solve(input: SolverInput): SolverOutput {
       result,
       availableRecipes,
       rawResources,
-      producibleItems,
+      solverProducibleItems,
       targets,
       resourceLimits,
       manualInputs,
@@ -455,7 +520,7 @@ function solve(input: SolverInput): SolverOutput {
       result,
       availableRecipes,
       rawResources,
-      producibleItems,
+      solverProducibleItems,
       targets,
       resourceLimits,
       manualInputs,
@@ -478,6 +543,11 @@ function solve(input: SolverInput): SolverOutput {
       inputRates[ingredient.itemClassName] = x * ratePerMachine(ingredient.amount, recipe.time);
     }
     for (const product of recipe.products) {
+      // Raw resources (water, iron ore, etc.) are drawn from the extraction pool, not produced
+      // by recipes — even if a packaging recipe incidentally outputs them (e.g. Unpackage Water).
+      // Excluding them here ensures itemFlows.producers stays empty for raw resources, so
+      // computeEdges correctly renders a ResourceNode rather than treating them as recipe outputs.
+      if (rawResources.has(product.itemClassName)) continue;
       outputRates[product.itemClassName] = x * ratePerMachine(product.amount, recipe.time);
     }
 
@@ -514,7 +584,7 @@ function solve(input: SolverInput): SolverOutput {
         return net < 0.001;
       });
     if (zeroTargets.length > 0) {
-      const errorMessage = buildInfeasibilityMessage(input, rawResources, producibleItems, strategy);
+      const errorMessage = buildInfeasibilityMessage(input, rawResources, solverProducibleItems, strategy);
       return { status: 'infeasible', errorMessage };
     }
   }
