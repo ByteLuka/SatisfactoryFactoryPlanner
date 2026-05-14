@@ -10,7 +10,7 @@ type StatsState =
   | { status: 'success'; data: GitHubStats }
   | { status: 'error' };
 
-const REPO = 'byteluka/satisfactory-factory-planner';
+const REPO = 'byteluka/SatisfactoryFactoryPlanner';
 let cached: GitHubStats | null = null;
 
 export function useGitHubStats(): StatsState {

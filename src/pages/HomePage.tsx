@@ -80,7 +80,7 @@ export function HomePage() {
               Get started →
             </button>
             <a
-              href="https://github.com/byteluka/satisfactory-factory-planner"
+              href="https://github.com/byteluka/SatisfactoryFactoryPlanner"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[#25252d] hover:bg-[#2e2e38] border border-[#3a3a46] hover:border-[#e8820c]/40 text-[#8888a0] hover:text-[#e8e8f0] font-medium px-6 py-3 rounded-md transition-colors text-base"
