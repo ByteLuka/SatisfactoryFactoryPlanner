@@ -83,6 +83,7 @@ export function ELKRouteEdge(props: EdgeProps) {
 
   const waypoints = (data?.waypoints as Waypoint[] | undefined) ?? [];
   const highlighted = (data?.highlighted as boolean | undefined) ?? false;
+  const isIncoming = (data?.isIncoming as boolean | undefined) ?? false;
   const gradientStart = (data?.gradientStart as string | undefined) ?? '#606072';
   const gradientEnd = (data?.gradientEnd as string | undefined) ?? '#606072';
   const useGradient = highlighted && gradientStart !== gradientEnd;
@@ -90,6 +91,7 @@ export function ELKRouteEdge(props: EdgeProps) {
   const highlightStroke = useGradient ? `url(#${gradientId})` : gradientStart;
 
   let edgePath: string;
+  let flowEdgePath: string;
   let labelX: number;
   let labelY: number;
 
@@ -131,6 +133,11 @@ export function ELKRouteEdge(props: EdgeProps) {
       : [{ x: sourceX, y: sourceY }, ...snapped, { x: targetX, y: targetY }];
 
     edgePath = buildRoutedPath(allPoints);
+    // For incoming (converging) edges: reverse the flow path so the animation's
+    // position-0 anchor sits at the target end. Combined with animation-direction:reverse
+    // the dashes still visually flow source→target, but now all converging edges share
+    // the same phase at the target — mirroring how diverging edges sync at the source.
+    flowEdgePath = isIncoming ? buildRoutedPath([...allPoints].reverse()) : edgePath;
     const mid = allPoints[Math.floor(allPoints.length / 2)];
     labelX = mid.x;
     labelY = mid.y;
@@ -139,6 +146,13 @@ export function ELKRouteEdge(props: EdgeProps) {
       sourceX, sourceY, sourcePosition,
       targetX, targetY, targetPosition,
     });
+    // For the smooth-step fallback, swap source↔target to get a reversed path.
+    [flowEdgePath] = isIncoming
+      ? getSmoothStepPath({
+          sourceX: targetX, sourceY: targetY, sourcePosition: targetPosition,
+          targetX: sourceX, targetY: sourceY, targetPosition: sourcePosition,
+        })
+      : [edgePath];
   }
 
   return (
@@ -169,14 +183,14 @@ export function ELKRouteEdge(props: EdgeProps) {
       />
       {highlighted && (
         <path
-          d={edgePath}
+          d={flowEdgePath}
           fill="none"
           stroke={highlightStroke}
           strokeWidth={3}
           strokeDasharray="16 8"
           strokeLinecap="round"
           style={{
-            animation: 'edge-flow 0.6s linear infinite',
+            animation: `edge-flow 0.6s linear ${isIncoming ? 'reverse' : 'normal'} infinite`,
             filter: useGradient ? undefined : `drop-shadow(0 0 5px ${gradientStart})`,
             opacity: 0.95,
             pointerEvents: 'none',

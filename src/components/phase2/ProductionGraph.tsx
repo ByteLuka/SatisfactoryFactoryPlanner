@@ -204,6 +204,7 @@ export function ProductionGraph({
           highlighted: isHighlighted,
           gradientStart,
           gradientEnd,
+          isIncoming: isHighlighted && selectedNodeId !== null && e.target === selectedNodeId,
         },
       };
     }),
