@@ -208,12 +208,34 @@ function Phase2PageInner({ gameData }: { gameData: GameData }) {
                         const item = gameData.items[cn];
                         const name = item?.name ?? cn.replace('Desc_', '').replace('_C', '');
                         const unit = item?.liquid ? ' m³/min' : '/min';
+                        const globalLimit = MAP_RESOURCE_POOL_LIMITS[cn];
+                        const pct = globalLimit != null ? (rate / globalLimit) * 100 : null;
+                        const pctColor =
+                          pct == null ? '#8888a0'
+                          : pct >= 80 ? '#f87171'
+                          : pct >= 40 ? '#fbbf24'
+                          : '#4ade80';
+                        const tooltip = globalLimit != null
+                          ? `${rate.toFixed(1)}${unit} of ${globalLimit.toLocaleString()}${unit} global limit (${pct!.toFixed(1)}%)`
+                          : undefined;
                         return (
-                          <div key={cn} className="flex justify-between text-sm mb-1">
+                          <div
+                            key={cn}
+                            title={tooltip}
+                            className="flex items-center gap-2 text-sm mb-1 cursor-default"
+                          >
                             <span className="text-[#8888a0] truncate flex-1">{name}</span>
-                            <span className="text-[#e8e8f0] font-mono ml-2">
+                            <span className="text-[#e8e8f0] font-mono">
                               {rate.toFixed(1)}{unit}
                             </span>
+                            {pct != null && (
+                              <span
+                                className="font-mono text-xs tabular-nums w-12 text-right flex-shrink-0"
+                                style={{ color: pctColor }}
+                              >
+                                {pct.toFixed(1)}%
+                              </span>
+                            )}
                           </div>
                         );
                       })}
