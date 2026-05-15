@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.6.0...v0.7.0) (2026-05-15)
+
+
+### Features
+
+* show global resource pool percentage in plan summary ([f29d266](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/commit/f29d2665467f2ce20283733380420ccbdec00b57))
+
 # [0.6.0](https://github.com/ByteLuka/SatisfactoryFactoryPlanner/compare/v0.5.6...v0.6.0) (2026-05-14)
 
 
