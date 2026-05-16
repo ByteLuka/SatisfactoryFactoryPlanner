@@ -75,6 +75,13 @@ export interface RawBuildingMetadata {
   powerProduction?: number;
 }
 
+export interface RawBuildingConnections {
+  beltInputs: number;
+  beltOutputs: number;
+  pipeInputs: number;
+  pipeOutputs: number;
+}
+
 export interface RawBuilding {
   slug: string;
   name: string;
@@ -83,7 +90,10 @@ export interface RawBuilding {
   categories: string[];
   buildMenuPriority: number;
   metadata: RawBuildingMetadata;
+  /** Clearance-box footprint in cm (Unreal units). X = side-to-side, Y = front-to-back, Z = vertical. */
   size: { width: number; height: number; length: number };
+  /** Physical connector counts — fixed hardware properties of the building. */
+  connections: RawBuildingConnections;
 }
 
 export interface RawGameData {

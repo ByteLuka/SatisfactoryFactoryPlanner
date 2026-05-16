@@ -63,6 +63,13 @@ export interface Item {
   liquid: boolean;
 }
 
+export interface BuildingConnections {
+  beltInputs: number;
+  beltOutputs: number;
+  pipeInputs: number;
+  pipeOutputs: number;
+}
+
 export interface Building {
   className: string;
   name: string;
@@ -71,6 +78,10 @@ export interface Building {
   powerConsumption: number;
   powerConsumptionExponent: number;
   powerProduction: number;
+  /** Clearance-box footprint in cm. width=X (side-to-side), length=Y (front-to-back), height=Z. */
+  size: { width: number; height: number; length: number };
+  /** Physical connector counts — fixed hardware properties of the building. */
+  connections: BuildingConnections;
 }
 
 /** A named MAM research tree (e.g. "Caterium", "Quartz"). */

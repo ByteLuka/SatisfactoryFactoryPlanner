@@ -340,6 +340,145 @@ if (schematicGroup) {
   }
 }
 
+// ── Building footprint + connector data ──────────────────────────────────────
+
+/**
+ * Parses mClearanceData and returns the building's snap footprint as the union
+ * bounding box of all non-excluded clearance elements.
+ *
+ * Elements with ExcludeForSnapping=True are skipped. Elements with a
+ * RelativeTransform that contains a Rotation are also skipped (quaternion
+ * application is not worth implementing here; rotated sub-boxes are decorative
+ * protrusions, not the structural footprint). Simple Translation offsets are
+ * applied to the Min/Max before taking the union.
+ *
+ * Values are in cm (Unreal units). width = X extent, length = Y extent, height = Z.
+ */
+function parsePrimaryFootprint(str) {
+  if (!str) return { width: 0, length: 0, height: 0 };
+
+  // Split the outer array at depth-1 boundaries to get individual element strings.
+  const elements = [];
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === '(') {
+      depth++;
+      if (depth === 2 && start === -1) start = i;
+    } else if (str[i] === ')') {
+      depth--;
+      if (depth === 1 && start !== -1) {
+        elements.push(str.slice(start, i + 1));
+        start = -1;
+      }
+    }
+  }
+
+  let unionMinX = Infinity, unionMinY = Infinity, unionMinZ = Infinity;
+  let unionMaxX = -Infinity, unionMaxY = -Infinity, unionMaxZ = -Infinity;
+
+  for (const elem of elements) {
+    if (elem.includes('ExcludeForSnapping=True')) continue;
+    // Skip rotated sub-elements — can't apply quaternion transform without extra math.
+    if (/Rotation=\(X=[^)]*W=/.test(elem)) continue;
+
+    const minM = elem.match(/Min=\(X=([-\d.]+),Y=([-\d.]+),Z=([-\d.]+)\)/);
+    const maxM = elem.match(/Max=\(X=([-\d.]+),Y=([-\d.]+),Z=([-\d.]+)\)/);
+    if (!minM || !maxM) continue;
+
+    let minX = parseFloat(minM[1]), minY = parseFloat(minM[2]), minZ = parseFloat(minM[3]);
+    let maxX = parseFloat(maxM[1]), maxY = parseFloat(maxM[2]), maxZ = parseFloat(maxM[3]);
+
+    // Apply a pure translation offset if present.
+    const txM = elem.match(/Translation=\(X=([-\d.]+),Y=([-\d.]+),Z=([-\d.]+)\)/);
+    if (txM) {
+      const tx = parseFloat(txM[1]), ty = parseFloat(txM[2]), tz = parseFloat(txM[3]);
+      minX += tx; maxX += tx;
+      minY += ty; maxY += ty;
+      minZ += tz; maxZ += tz;
+    }
+
+    if (minX < unionMinX) unionMinX = minX;
+    if (minY < unionMinY) unionMinY = minY;
+    if (minZ < unionMinZ) unionMinZ = minZ;
+    if (maxX > unionMaxX) unionMaxX = maxX;
+    if (maxY > unionMaxY) unionMaxY = maxY;
+    if (maxZ > unionMaxZ) unionMaxZ = maxZ;
+  }
+
+  if (!isFinite(unionMaxX)) return { width: 0, length: 0, height: 0 };
+
+  return {
+    width:  Math.round(unionMaxX - unionMinX),
+    length: Math.round(unionMaxY - unionMinY),
+    height: Math.round(unionMaxZ - unionMinZ),
+  };
+}
+
+/** Merges clearance-derived footprint with the override table. */
+function buildingSize(className, clearanceStr) {
+  const clearance = parsePrimaryFootprint(clearanceStr);
+  const override = BUILDING_SIZE_OVERRIDES[className] ?? {};
+  return {
+    width:  override.width  ?? clearance.width,
+    length: override.length ?? clearance.length,
+    height: override.height ?? clearance.height,
+  };
+}
+
+/**
+ * Size overrides (in cm) applied on top of clearance-derived width/length.
+ *
+ * Why:
+ *  - mClearanceData Z (height) is the placement headroom, not the visual building
+ *    height. Heights must always come from this table.
+ *  - For most buildings width (X) and length (Y) from clearance are accurate.
+ *    Exceptions: Particle Accelerator's clearance boxes are all offset from the
+ *    building origin and don't represent the real footprint.
+ *
+ * Values from Satisfactory Wiki. Dimensions in cm (Unreal units).
+ */
+const BUILDING_SIZE_OVERRIDES = {
+  Build_SmelterMk1_C:      {                   height:  850 },
+  Build_ConstructorMk1_C:  {                   height:  800 },
+  Build_FoundryMk1_C:      {                   height:  900 },
+  Build_AssemblerMk1_C:    {                   height: 1100 },
+  Build_ManufacturerMk1_C: {                   height: 1200 },
+  Build_OilRefinery_C:     {                   height: 3000 },
+  Build_Packager_C:        {                   height: 1200 },
+  Build_Blender_C:         {                   height: 1500 },
+  Build_HadronCollider_C:  { width: 2400, length: 3800, height: 3200 },
+  Build_QuantumEncoder_C:  {                   height: 1800 },
+  Build_Converter_C:       {                   height: 1800 },
+  Build_GeneratorNuclear_C: { length: 4300,    height: 3900 },
+};
+
+/**
+ * Physical connector counts per manufacturer building.
+ * These are fixed hardware properties of each building model — they do not
+ * vary by recipe. Belt connections carry solid items; pipe connections carry
+ * liquids. Positions are not available in Docs.json (they live in UE4 Blueprint
+ * assets); only counts are stored here.
+ *
+ * Source: in-game observation and Satisfactory Wiki.
+ */
+const BUILDING_CONNECTIONS = {
+  Build_SmelterMk1_C:       { beltInputs: 1, beltOutputs: 1, pipeInputs: 0, pipeOutputs: 0 },
+  Build_ConstructorMk1_C:   { beltInputs: 1, beltOutputs: 1, pipeInputs: 0, pipeOutputs: 0 },
+  Build_FoundryMk1_C:       { beltInputs: 2, beltOutputs: 1, pipeInputs: 0, pipeOutputs: 0 },
+  Build_AssemblerMk1_C:     { beltInputs: 2, beltOutputs: 1, pipeInputs: 0, pipeOutputs: 0 },
+  Build_ManufacturerMk1_C:  { beltInputs: 4, beltOutputs: 1, pipeInputs: 0, pipeOutputs: 0 },
+  Build_OilRefinery_C:      { beltInputs: 1, beltOutputs: 1, pipeInputs: 1, pipeOutputs: 1 },
+  Build_Packager_C:         { beltInputs: 1, beltOutputs: 1, pipeInputs: 1, pipeOutputs: 1 },
+  Build_Blender_C:          { beltInputs: 2, beltOutputs: 1, pipeInputs: 2, pipeOutputs: 1 },
+  Build_HadronCollider_C:   { beltInputs: 2, beltOutputs: 1, pipeInputs: 1, pipeOutputs: 0 },
+  Build_QuantumEncoder_C:   { beltInputs: 4, beltOutputs: 1, pipeInputs: 1, pipeOutputs: 0 },
+  Build_Converter_C:        { beltInputs: 2, beltOutputs: 2, pipeInputs: 0, pipeOutputs: 0 },
+  Build_GeneratorNuclear_C: { beltInputs: 1, beltOutputs: 1, pipeInputs: 1, pipeOutputs: 0 },
+};
+
+const DEFAULT_CONNECTIONS = { beltInputs: 0, beltOutputs: 0, pipeInputs: 0, pipeOutputs: 0 };
+
 // ── Buildings (manufacturers) ────────────────────────────────────────────────
 
 /** @type {Record<string, import('../src/data/raw-types').RawBuilding>} */
@@ -361,7 +500,8 @@ for (const group of manufacturerGroups) {
         powerConsumptionExponent: parseNum(cls.mPowerConsumptionExponent),
         manufacturingSpeed: parseNum(cls.mManufacturingSpeed) || 1,
       },
-      size: { width: 0, height: 0, length: 0 },
+      size: buildingSize(className, cls.mClearanceData || ''),
+      connections: BUILDING_CONNECTIONS[className] ?? DEFAULT_CONNECTIONS,
     };
   }
 }
@@ -394,7 +534,8 @@ if (nuclearGenGroup) {
         manufacturingSpeed: 1,
         powerProduction,
       },
-      size: { width: 0, height: 0, length: 0 },
+      size: buildingSize(buildingClassName, cls.mClearanceData || ''),
+      connections: BUILDING_CONNECTIONS[buildingClassName] ?? DEFAULT_CONNECTIONS,
     };
 
     const fuelLoadAmount = parseInt10(String(cls.mFuelLoadAmount ?? '1'));
